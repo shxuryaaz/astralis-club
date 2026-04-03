@@ -2,10 +2,10 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-const PARTICLE_COUNT = 90;
+const PARTICLE_COUNT = 180;
 const TRAIL_LENGTH = 8;
 const CONNECTION_THRESHOLD = 8;
-const MAX_CONNECTIONS = 200;
+const MAX_CONNECTIONS = 400;
 
 function DataPoints() {
   const pointsRef   = useRef<THREE.Points>(null!);

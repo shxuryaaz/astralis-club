@@ -74,7 +74,7 @@ export default function Landing() {
 
         {/* Statement */}
         <h2 className="font-sans font-light text-3xl sm:text-4xl text-white/90 leading-snug tracking-wide mb-12">
-          NIET's premier quant and fintech collective — built to think in systems, and compete at the highest level.
+          NIET's premier quant and fintech collective, built to think in systems, and compete at the highest level.
         </h2>
 
         {/* Body */}
