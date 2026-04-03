@@ -74,14 +74,14 @@ export default function Landing() {
 
         {/* Statement */}
         <h2 className="font-sans font-light text-3xl sm:text-4xl text-white/90 leading-snug tracking-wide mb-12">
-          A fintech collective from NIET — built to enter hackathons, and built to win them.
+          NIET's premier quant and fintech collective — built to think in systems, and compete at the highest level.
         </h2>
 
         {/* Body */}
         <p className="font-sans text-sm text-white/35 leading-loose max-w-xl mb-20">
-          Astralis is not open to everyone. It is a closed group of builders, analysts, and strategists
-          who operate at the intersection of financial systems and technology. We move fast,
-          think in systems, and compete at the highest level — leaving before the noise starts.
+          Astralis operates at the intersection of quantitative finance, financial technology, and
+          competitive engineering. We model markets, build systems, and dominate hackathons.
+          Closed by design. Selected by merit.
         </p>
 
         {/* Three pillars */}
@@ -89,18 +89,18 @@ export default function Landing() {
           {[
             {
               index: '01',
-              title: 'Fintech First',
-              body: 'Payments, capital markets, lending infrastructure, and the systems that move money.',
+              title: 'Quant & Finance',
+              body: 'Algorithmic thinking, financial modelling, market systems, and the mathematics that moves capital.',
             },
             {
               index: '02',
-              title: 'Hackathon Focused',
-              body: 'We select, prepare, and execute. Every competition is a coordinated operation, not a side project.',
+              title: 'Fintech & Engineering',
+              body: 'Payments infrastructure, lending systems, capital markets tech — where finance meets code.',
             },
             {
               index: '03',
-              title: 'Closed by Design',
-              body: 'Membership is not applied for. It is extended. Quality over volume, always.',
+              title: 'Hackathon Dominance',
+              body: "We don't participate. We arrive prepared, execute as a unit, and leave with the win.",
             },
           ].map((p) => (
             <div key={p.index}>

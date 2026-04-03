@@ -4,16 +4,19 @@ import * as THREE from 'three';
 
 const PARTICLE_COUNT = 90;
 const TRAIL_LENGTH = 8;
+const CONNECTION_THRESHOLD = 8;
+const MAX_CONNECTIONS = 200;
 
 function DataPoints() {
-  const pointsRef = useRef<THREE.Points>(null!);
-  const linesRef = useRef<THREE.LineSegments>(null!);
-  const elapsed = useRef(0);
+  const pointsRef   = useRef<THREE.Points>(null!);
+  const trailsRef   = useRef<THREE.LineSegments>(null!);
+  const connsRef    = useRef<THREE.LineSegments>(null!);
+  const icoRef      = useRef<THREE.LineSegments>(null!);
+  const elapsed     = useRef(0);
 
   const particles = useMemo(() => {
     const data = [];
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      // Spawn already spread across the scene — history pre-filled so no burst
       const spawn = new THREE.Vector3(
         (Math.random() - 0.5) * 40,
         (Math.random() - 0.5) * 40,
@@ -32,27 +35,43 @@ function DataPoints() {
     return data;
   }, []);
 
-  const [pointPositions, linePositions, lineColors] = useMemo(() => {
-    const pPos = new Float32Array(PARTICLE_COUNT * 3);
-    const lPos = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
-    const lCol = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
+  const [pointPositions, trailPositions, trailColors] = useMemo(() => {
+    const pPos  = new Float32Array(PARTICLE_COUNT * 3);
+    const lPos  = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
+    const lCol  = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
     return [pPos, lPos, lCol];
+  }, []);
+
+  const [connPositions, connColors] = useMemo(() => {
+    const cPos = new Float32Array(MAX_CONNECTIONS * 2 * 3);
+    const cCol = new Float32Array(MAX_CONNECTIONS * 2 * 3);
+    return [cPos, cCol];
+  }, []);
+
+  // Icosahedron wireframe geometry (built once)
+  const icoGeometry = useMemo(() => {
+    const geo    = new THREE.IcosahedronGeometry(3.5, 1);
+    const wireGeo = new THREE.WireframeGeometry(geo);
+    return wireGeo;
   }, []);
 
   useFrame((_, delta) => {
     elapsed.current = Math.min(elapsed.current + delta, 3);
-    // Fade in over 3 seconds
     const fadeIn = Math.min(elapsed.current / 3, 1);
 
-    let lineIdx = 0;
-    let colorIdx = 0;
+    // ── Rotate icosahedron ──
+    if (icoRef.current) {
+      icoRef.current.rotation.x += 0.0008;
+      icoRef.current.rotation.y += 0.0012;
+    }
+
+    // ── Update particles + trails ──
+    let trailIdx = 0;
+    let trailColIdx = 0;
 
     particles.forEach((p, i) => {
-      for (let j = TRAIL_LENGTH - 1; j > 0; j--) {
-        p.history[j].copy(p.history[j - 1]);
-      }
+      for (let j = TRAIL_LENGTH - 1; j > 0; j--) p.history[j].copy(p.history[j - 1]);
       p.history[0].copy(p.position);
-
       p.position.add(p.velocity);
 
       if (Math.abs(p.position.x) > 25) p.position.x *= -0.95;
@@ -64,72 +83,88 @@ function DataPoints() {
       pointPositions[i * 3 + 2] = p.position.z;
 
       for (let j = 0; j < TRAIL_LENGTH - 1; j++) {
-        const start = p.history[j];
-        const end   = p.history[j + 1];
-
-        linePositions[lineIdx++] = start.x;
-        linePositions[lineIdx++] = start.y;
-        linePositions[lineIdx++] = start.z;
-        linePositions[lineIdx++] = end.x;
-        linePositions[lineIdx++] = end.y;
-        linePositions[lineIdx++] = end.z;
-
+        const s = p.history[j], e = p.history[j + 1];
+        trailPositions[trailIdx++] = s.x; trailPositions[trailIdx++] = s.y; trailPositions[trailIdx++] = s.z;
+        trailPositions[trailIdx++] = e.x; trailPositions[trailIdx++] = e.y; trailPositions[trailIdx++] = e.z;
         const alpha = (1 - j / TRAIL_LENGTH) * 0.15 * fadeIn;
         for (let k = 0; k < 2; k++) {
-          lineColors[colorIdx++] = alpha;
-          lineColors[colorIdx++] = alpha;
-          lineColors[colorIdx++] = alpha;
+          trailColors[trailColIdx++] = alpha;
+          trailColors[trailColIdx++] = alpha;
+          trailColors[trailColIdx++] = alpha;
         }
       }
     });
 
-    const pts = pointsRef.current;
-    const lines = linesRef.current;
+    // ── Connection lines between nearby particles ──
+    let connIdx = 0;
+    let connColIdx = 0;
+    let connectionCount = 0;
 
-    pts.geometry.attributes.position.needsUpdate = true;
-    lines.geometry.attributes.position.needsUpdate = true;
-    lines.geometry.attributes.color.needsUpdate = true;
+    outer: for (let i = 0; i < PARTICLE_COUNT; i++) {
+      for (let j = i + 1; j < PARTICLE_COUNT; j++) {
+        if (connectionCount >= MAX_CONNECTIONS) break outer;
+        const dist = particles[i].position.distanceTo(particles[j].position);
+        if (dist < CONNECTION_THRESHOLD) {
+          const alpha = (1 - dist / CONNECTION_THRESHOLD) * 0.07 * fadeIn;
+          const a = particles[i].position, b = particles[j].position;
+          connPositions[connIdx++] = a.x; connPositions[connIdx++] = a.y; connPositions[connIdx++] = a.z;
+          connPositions[connIdx++] = b.x; connPositions[connIdx++] = b.y; connPositions[connIdx++] = b.z;
+          for (let k = 0; k < 2; k++) {
+            connColors[connColIdx++] = alpha;
+            connColors[connColIdx++] = alpha;
+            connColors[connColIdx++] = alpha;
+          }
+          connectionCount++;
+        }
+      }
+    }
+    // Zero out unused connection slots
+    for (let i = connIdx; i < connPositions.length; i++) connPositions[i] = 0;
+    for (let i = connColIdx; i < connColors.length; i++) connColors[i] = 0;
 
-    // Fade in point + line opacity
-    (pts.material as THREE.PointsMaterial).opacity = 0.4 * fadeIn;
-    (lines.material as THREE.LineBasicMaterial).opacity = 0.5 * fadeIn;
+    pointsRef.current.geometry.attributes.position.needsUpdate = true;
+    trailsRef.current.geometry.attributes.position.needsUpdate = true;
+    trailsRef.current.geometry.attributes.color.needsUpdate = true;
+    connsRef.current.geometry.attributes.position.needsUpdate = true;
+    connsRef.current.geometry.attributes.color.needsUpdate = true;
+
+    (pointsRef.current.material as THREE.PointsMaterial).opacity    = 0.4 * fadeIn;
+    (trailsRef.current.material as THREE.LineBasicMaterial).opacity  = 0.5 * fadeIn;
+    (connsRef.current.material as THREE.LineBasicMaterial).opacity   = 1;
+    (icoRef.current.material as THREE.LineBasicMaterial).opacity     = 0.07 * fadeIn;
   });
 
   return (
     <group>
+      {/* Particles */}
       <points ref={pointsRef}>
         <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={PARTICLE_COUNT}
-            array={pointPositions}
-            itemSize={3}
-          />
+          <bufferAttribute attach="attributes-position" count={PARTICLE_COUNT} array={pointPositions} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial
-          size={0.08}
-          color="#ffffff"
-          transparent
-          opacity={0}
-          sizeAttenuation
-        />
+        <pointsMaterial size={0.08} color="#ffffff" transparent opacity={0} sizeAttenuation />
       </points>
-      <lineSegments ref={linesRef}>
+
+      {/* Trails */}
+      <lineSegments ref={trailsRef}>
         <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2}
-            array={linePositions}
-            itemSize={3}
-          />
-          <bufferAttribute
-            attach="attributes-color"
-            count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2}
-            array={lineColors}
-            itemSize={3}
-          />
+          <bufferAttribute attach="attributes-position" count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2} array={trailPositions} itemSize={3} />
+          <bufferAttribute attach="attributes-color"    count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2} array={trailColors}    itemSize={3} />
         </bufferGeometry>
         <lineBasicMaterial vertexColors transparent opacity={0} />
+      </lineSegments>
+
+      {/* Connection lines */}
+      <lineSegments ref={connsRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={MAX_CONNECTIONS * 2} array={connPositions} itemSize={3} />
+          <bufferAttribute attach="attributes-color"    count={MAX_CONNECTIONS * 2} array={connColors}    itemSize={3} />
+        </bufferGeometry>
+        <lineBasicMaterial vertexColors transparent opacity={1} />
+      </lineSegments>
+
+      {/* Wireframe icosahedron */}
+      <lineSegments ref={icoRef} geometry={icoGeometry}>
+        <lineBasicMaterial color="#ffffff" transparent opacity={0} />
       </lineSegments>
     </group>
   );
@@ -143,10 +178,6 @@ export default function AstralisBackground() {
         <fog attach="fog" args={['#000000', 15, 35]} />
         <ambientLight intensity={0.1} />
         <DataPoints />
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[4, 32, 32]} />
-          <meshBasicMaterial color="#000000" transparent opacity={0.15} />
-        </mesh>
       </Canvas>
     </div>
   );
