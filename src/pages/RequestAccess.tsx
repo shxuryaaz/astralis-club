@@ -100,9 +100,7 @@ export default function RequestAccess() {
               <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/40">Received</p>
               <p className="font-sans font-light text-2xl text-white tracking-wide">We'll be in touch.</p>
               <p className="font-sans text-sm text-white/40 leading-relaxed">
-                Once approved, sign in at{' '}
-                <span className="text-white/60">/login</span>{' '}
-                using the email and password you just set.
+                If selected, you'll hear from us at {values.email}.
               </p>
               <div className="pt-6">
                 <Link to="/" className="font-mono text-[9px] tracking-widest uppercase text-white/30 hover:text-white/60 transition-colors duration-500">
