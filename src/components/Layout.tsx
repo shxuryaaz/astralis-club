@@ -21,24 +21,18 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.07]">
-        <div className="max-w-4xl mx-auto px-8 h-11 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 h-11 flex items-center justify-between">
           <Link
             to="/"
             className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/45 transition-colors duration-500"
           >
             Astralis
           </Link>
-          <nav className="flex items-center gap-8">
-            <Link to="/dashboard" className={navClass('/dashboard')}>
-              Feed
-            </Link>
-            <Link to="/chat" className={navClass('/chat')}>
-              Channel
-            </Link>
+          <nav className="flex items-center gap-4 sm:gap-6 md:gap-8">
+            <Link to="/dashboard" className={navClass('/dashboard')}>Feed</Link>
+            <Link to="/chat" className={navClass('/chat')}>Channel</Link>
             {profile?.role === 'admin' && (
-              <Link to="/admin" className={navClass('/admin')}>
-                Admin
-              </Link>
+              <Link to="/admin" className={navClass('/admin')}>Admin</Link>
             )}
             <button
               onClick={handleSignOut}

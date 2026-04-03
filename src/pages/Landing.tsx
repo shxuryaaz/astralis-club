@@ -65,7 +65,7 @@ export default function Landing() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: 1.4, ease: 'easeOut' }}
-        className="relative z-20 max-w-3xl mx-auto px-8 py-32"
+        className="relative z-20 max-w-3xl mx-auto px-4 md:px-8 py-20 md:py-32"
       >
         {/* Label */}
         <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/25 mb-16">
@@ -85,7 +85,7 @@ export default function Landing() {
         </p>
 
         {/* Three pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 border-t border-white/[0.07] pt-14">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12 border-t border-white/[0.07] pt-10 md:pt-14">
           {[
             {
               index: '01',

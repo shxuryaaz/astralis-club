@@ -1,184 +1,81 @@
-import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { useEffect, useRef } from 'react'
 
-const PARTICLE_COUNT = 180;
-const TRAIL_LENGTH = 8;
-const CONNECTION_THRESHOLD = 8;
-const MAX_CONNECTIONS = 400;
-
-function DataPoints() {
-  const pointsRef   = useRef<THREE.Points>(null!);
-  const trailsRef   = useRef<THREE.LineSegments>(null!);
-  const connsRef    = useRef<THREE.LineSegments>(null!);
-  const icoRef      = useRef<THREE.LineSegments>(null!);
-  const elapsed     = useRef(0);
-
-  const particles = useMemo(() => {
-    const data = [];
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const spawn = new THREE.Vector3(
-        (Math.random() - 0.5) * 40,
-        (Math.random() - 0.5) * 40,
-        (Math.random() - 0.5) * 20
-      );
-      data.push({
-        position: spawn.clone(),
-        velocity: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.006,
-          (Math.random() - 0.5) * 0.006,
-          (Math.random() - 0.5) * 0.003
-        ),
-        history: Array.from({ length: TRAIL_LENGTH }, () => spawn.clone())
-      });
-    }
-    return data;
-  }, []);
-
-  const [pointPositions, trailPositions, trailColors] = useMemo(() => {
-    const pPos  = new Float32Array(PARTICLE_COUNT * 3);
-    const lPos  = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
-    const lCol  = new Float32Array(PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2 * 3);
-    return [pPos, lPos, lCol];
-  }, []);
-
-  const [connPositions, connColors] = useMemo(() => {
-    const cPos = new Float32Array(MAX_CONNECTIONS * 2 * 3);
-    const cCol = new Float32Array(MAX_CONNECTIONS * 2 * 3);
-    return [cPos, cCol];
-  }, []);
-
-  // Icosahedron wireframe geometry (built once)
-  const icoGeometry = useMemo(() => {
-    const geo    = new THREE.IcosahedronGeometry(3.5, 1);
-    const wireGeo = new THREE.WireframeGeometry(geo);
-    return wireGeo;
-  }, []);
-
-  useFrame((_, delta) => {
-    elapsed.current = Math.min(elapsed.current + delta, 3);
-    const fadeIn = Math.min(elapsed.current / 3, 1);
-
-    // ── Rotate icosahedron ──
-    if (icoRef.current) {
-      icoRef.current.rotation.x += 0.0008;
-      icoRef.current.rotation.y += 0.0012;
-    }
-
-    // ── Update particles + trails ──
-    let trailIdx = 0;
-    let trailColIdx = 0;
-
-    particles.forEach((p, i) => {
-      for (let j = TRAIL_LENGTH - 1; j > 0; j--) p.history[j].copy(p.history[j - 1]);
-      p.history[0].copy(p.position);
-      p.position.add(p.velocity);
-
-      if (Math.abs(p.position.x) > 25) p.position.x *= -0.95;
-      if (Math.abs(p.position.y) > 25) p.position.y *= -0.95;
-      if (Math.abs(p.position.z) > 15) p.position.z *= -0.95;
-
-      pointPositions[i * 3]     = p.position.x;
-      pointPositions[i * 3 + 1] = p.position.y;
-      pointPositions[i * 3 + 2] = p.position.z;
-
-      for (let j = 0; j < TRAIL_LENGTH - 1; j++) {
-        const s = p.history[j], e = p.history[j + 1];
-        trailPositions[trailIdx++] = s.x; trailPositions[trailIdx++] = s.y; trailPositions[trailIdx++] = s.z;
-        trailPositions[trailIdx++] = e.x; trailPositions[trailIdx++] = e.y; trailPositions[trailIdx++] = e.z;
-        const alpha = (1 - j / TRAIL_LENGTH) * 0.15 * fadeIn;
-        for (let k = 0; k < 2; k++) {
-          trailColors[trailColIdx++] = alpha;
-          trailColors[trailColIdx++] = alpha;
-          trailColors[trailColIdx++] = alpha;
-        }
-      }
-    });
-
-    // ── Connection lines between nearby particles ──
-    let connIdx = 0;
-    let connColIdx = 0;
-    let connectionCount = 0;
-
-    outer: for (let i = 0; i < PARTICLE_COUNT; i++) {
-      for (let j = i + 1; j < PARTICLE_COUNT; j++) {
-        if (connectionCount >= MAX_CONNECTIONS) break outer;
-        const dist = particles[i].position.distanceTo(particles[j].position);
-        if (dist < CONNECTION_THRESHOLD) {
-          const alpha = (1 - dist / CONNECTION_THRESHOLD) * 0.07 * fadeIn;
-          const a = particles[i].position, b = particles[j].position;
-          connPositions[connIdx++] = a.x; connPositions[connIdx++] = a.y; connPositions[connIdx++] = a.z;
-          connPositions[connIdx++] = b.x; connPositions[connIdx++] = b.y; connPositions[connIdx++] = b.z;
-          for (let k = 0; k < 2; k++) {
-            connColors[connColIdx++] = alpha;
-            connColors[connColIdx++] = alpha;
-            connColors[connColIdx++] = alpha;
-          }
-          connectionCount++;
-        }
-      }
-    }
-    // Zero out unused connection slots
-    for (let i = connIdx; i < connPositions.length; i++) connPositions[i] = 0;
-    for (let i = connColIdx; i < connColors.length; i++) connColors[i] = 0;
-
-    pointsRef.current.geometry.attributes.position.needsUpdate = true;
-    trailsRef.current.geometry.attributes.position.needsUpdate = true;
-    trailsRef.current.geometry.attributes.color.needsUpdate = true;
-    connsRef.current.geometry.attributes.position.needsUpdate = true;
-    connsRef.current.geometry.attributes.color.needsUpdate = true;
-
-    (pointsRef.current.material as THREE.PointsMaterial).opacity    = 0.4 * fadeIn;
-    (trailsRef.current.material as THREE.LineBasicMaterial).opacity  = 0.5 * fadeIn;
-    (connsRef.current.material as THREE.LineBasicMaterial).opacity   = 1;
-    (icoRef.current.material as THREE.LineBasicMaterial).opacity     = 0.07 * fadeIn;
-  });
-
-  return (
-    <group>
-      {/* Particles */}
-      <points ref={pointsRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={PARTICLE_COUNT} array={pointPositions} itemSize={3} />
-        </bufferGeometry>
-        <pointsMaterial size={0.08} color="#ffffff" transparent opacity={0} sizeAttenuation />
-      </points>
-
-      {/* Trails */}
-      <lineSegments ref={trailsRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2} array={trailPositions} itemSize={3} />
-          <bufferAttribute attach="attributes-color"    count={PARTICLE_COUNT * (TRAIL_LENGTH - 1) * 2} array={trailColors}    itemSize={3} />
-        </bufferGeometry>
-        <lineBasicMaterial vertexColors transparent opacity={0} />
-      </lineSegments>
-
-      {/* Connection lines */}
-      <lineSegments ref={connsRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={MAX_CONNECTIONS * 2} array={connPositions} itemSize={3} />
-          <bufferAttribute attach="attributes-color"    count={MAX_CONNECTIONS * 2} array={connColors}    itemSize={3} />
-        </bufferGeometry>
-        <lineBasicMaterial vertexColors transparent opacity={1} />
-      </lineSegments>
-
-      {/* Wireframe icosahedron */}
-      <lineSegments ref={icoRef} geometry={icoGeometry}>
-        <lineBasicMaterial color="#ffffff" transparent opacity={0} />
-      </lineSegments>
-    </group>
-  );
+interface Wave {
+  freq: number
+  amp: number
+  phase: number
+  speed: number
+  opacity: number
+  yOffset: number
 }
 
 export default function AstralisBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const waves: Wave[] = [
+      { freq: 0.008, amp: 90,  phase: 0,    speed: 0.004, opacity: 0.055, yOffset: 0 },
+      { freq: 0.014, amp: 55,  phase: 2.1,  speed: 0.006, opacity: 0.04,  yOffset: 0.15 },
+      { freq: 0.005, amp: 130, phase: 4.3,  speed: 0.002, opacity: 0.035, yOffset: -0.1 },
+      { freq: 0.02,  amp: 40,  phase: 1.0,  speed: 0.009, opacity: 0.05,  yOffset: 0.25 },
+      { freq: 0.011, amp: 75,  phase: 3.5,  speed: 0.003, opacity: 0.03,  yOffset: -0.2 },
+      { freq: 0.017, amp: 50,  phase: 0.7,  speed: 0.007, opacity: 0.045, yOffset: 0.05 },
+    ]
+
+    let animId: number
+    let startTime: number | null = null
+    const FADE_DURATION = 3000 // ms
+
+    function resize() {
+      canvas.width  = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+
+    function draw(timestamp: number) {
+      if (!startTime) startTime = timestamp
+      const elapsed = timestamp - startTime
+      const fadeIn  = Math.min(elapsed / FADE_DURATION, 1)
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      waves.forEach((w) => {
+        ctx.beginPath()
+        ctx.lineWidth = 1
+        ctx.strokeStyle = `rgba(255,255,255,${w.opacity * fadeIn})`
+
+        const baseY = canvas.height * (0.5 + w.yOffset)
+
+        for (let x = 0; x <= canvas.width; x += 2) {
+          const y = baseY + Math.sin(x * w.freq + w.phase) * w.amp
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+        }
+
+        ctx.stroke()
+        w.phase += w.speed
+      })
+
+      animId = requestAnimationFrame(draw)
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+    animId = requestAnimationFrame(draw)
+
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+
   return (
-    <div className="fixed inset-0 z-0 bg-black">
-      <Canvas camera={{ position: [0, 0, 20], fov: 45 }}>
-        <color attach="background" args={['#000000']} />
-        <fog attach="fog" args={['#000000', 15, 35]} />
-        <ambientLight intensity={0.1} />
-        <DataPoints />
-      </Canvas>
-    </div>
-  );
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0 bg-black w-full h-full"
+    />
+  )
 }
