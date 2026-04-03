@@ -19,12 +19,12 @@ export default function AstralisBackground() {
     if (!ctx) return
 
     const waves: Wave[] = [
-      { freq: 0.008, amp: 90,  phase: 0,    speed: 0.004, opacity: 0.055, yOffset: 0 },
-      { freq: 0.014, amp: 55,  phase: 2.1,  speed: 0.006, opacity: 0.04,  yOffset: 0.15 },
-      { freq: 0.005, amp: 130, phase: 4.3,  speed: 0.002, opacity: 0.035, yOffset: -0.1 },
-      { freq: 0.02,  amp: 40,  phase: 1.0,  speed: 0.009, opacity: 0.05,  yOffset: 0.25 },
-      { freq: 0.011, amp: 75,  phase: 3.5,  speed: 0.003, opacity: 0.03,  yOffset: -0.2 },
-      { freq: 0.017, amp: 50,  phase: 0.7,  speed: 0.007, opacity: 0.045, yOffset: 0.05 },
+      { freq: 0.008, amp: 100, phase: 0,   speed: 0.004, opacity: 0.18, yOffset: 0    },
+      { freq: 0.014, amp: 65,  phase: 2.1, speed: 0.006, opacity: 0.13, yOffset: 0.15 },
+      { freq: 0.005, amp: 140, phase: 4.3, speed: 0.002, opacity: 0.10, yOffset: -0.1 },
+      { freq: 0.02,  amp: 50,  phase: 1.0, speed: 0.009, opacity: 0.15, yOffset: 0.25 },
+      { freq: 0.011, amp: 85,  phase: 3.5, speed: 0.003, opacity: 0.09, yOffset: -0.2 },
+      { freq: 0.017, amp: 60,  phase: 0.7, speed: 0.007, opacity: 0.12, yOffset: 0.05 },
     ]
 
     let animId: number
@@ -45,7 +45,7 @@ export default function AstralisBackground() {
 
       waves.forEach((w) => {
         ctx.beginPath()
-        ctx.lineWidth = 1
+        ctx.lineWidth = 1.5
         ctx.strokeStyle = `rgba(255,255,255,${w.opacity * fadeIn})`
 
         const baseY = canvas.height * (0.5 + w.yOffset)

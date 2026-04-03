@@ -60,32 +60,54 @@ export default function Landing() {
       </div>
 
       {/* ── About Section ── */}
-      <motion.section
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-100px' }}
-        transition={{ duration: 1.4, ease: 'easeOut' }}
-        className="relative z-20 max-w-3xl mx-auto px-4 md:px-8 py-20 md:py-32"
-      >
+      <section className="relative z-20 py-24 md:py-40">
+
         {/* Label */}
-        <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/25 mb-16">
-          02 // What We Are
-        </p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1 }}
+          className="max-w-5xl mx-auto px-4 md:px-8 mb-16 md:mb-20"
+        >
+          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/25">
+            02 // What We Are
+          </p>
+        </motion.div>
 
-        {/* Statement */}
-        <h2 className="font-sans font-light text-3xl sm:text-4xl text-white/90 leading-snug tracking-wide mb-12">
-          NIET's premier quant and fintech collective, built to think in systems, and compete at the highest level.
-        </h2>
+        {/* Headline */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="max-w-5xl mx-auto px-4 md:px-8 mb-16 md:mb-24"
+        >
+          <h2 className="font-sans font-light text-4xl sm:text-5xl md:text-[3.75rem] leading-[1.15] tracking-wide">
+            <span className="text-white/90">NIET's premier</span>
+            <br />
+            <span className="text-white/40">quant &amp; fintech</span>
+            <br />
+            <span className="text-white/90">collective.</span>
+          </h2>
+        </motion.div>
 
-        {/* Body */}
-        <p className="font-sans text-sm text-white/35 leading-loose max-w-xl mb-20">
-          Astralis operates at the intersection of quantitative finance, financial technology, and
-          competitive engineering. We model markets, build systems, and dominate hackathons.
-          Closed by design. Selected by merit.
-        </p>
+        {/* Descriptor */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: 0.2 }}
+          className="max-w-5xl mx-auto px-4 md:px-8 mb-20 md:mb-28"
+        >
+          <p className="font-sans text-sm text-white/30 leading-loose max-w-md">
+            We model markets, build systems, and dominate hackathons.
+            Closed by design. Selected by merit.
+          </p>
+        </motion.div>
 
-        {/* Three pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12 border-t border-white/[0.07] pt-10 md:pt-14">
+        {/* Pillars — horizontal rows */}
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
           {[
             {
               index: '01',
@@ -102,17 +124,32 @@ export default function Landing() {
               title: 'Hackathon Dominance',
               body: "We don't participate. We arrive prepared, execute as a unit, and leave with the win.",
             },
-          ].map((p) => (
-            <div key={p.index}>
-              <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mb-3">
+          ].map((p, i) => (
+            <motion.div
+              key={p.index}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: i * 0.12, ease: 'easeOut' }}
+              className="flex items-start gap-6 md:gap-12 py-7 md:py-9 border-t border-white/[0.07]"
+            >
+              <span className="font-mono text-[10px] tracking-widest text-white/20 mt-[3px] w-5 flex-shrink-0">
                 {p.index}
-              </p>
-              <p className="font-sans text-sm text-white/70 mb-2 tracking-wide">{p.title}</p>
-              <p className="font-sans text-xs text-white/30 leading-relaxed">{p.body}</p>
-            </div>
+              </span>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:gap-12 flex-1 min-w-0">
+                <p className="font-sans text-sm text-white/65 tracking-wide mb-2 sm:mb-0 sm:w-44 flex-shrink-0">
+                  {p.title}
+                </p>
+                <p className="font-sans text-sm text-white/28 leading-relaxed flex-1">
+                  {p.body}
+                </p>
+              </div>
+            </motion.div>
           ))}
+          <div className="border-t border-white/[0.07]" />
         </div>
-      </motion.section>
+
+      </section>
 
       {/* ── Footer ── */}
       <div className="relative z-20 border-t border-white/[0.07] px-8 py-8 flex justify-between items-center font-mono text-[9px] tracking-widest text-white/15 uppercase">
