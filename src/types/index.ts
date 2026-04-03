@@ -23,3 +23,11 @@ export interface Message {
   content: string
   created_at: string
 }
+
+export interface AccessRequest {
+  id: string
+  name: string
+  email: string
+  reason: string
+  created_at: string
+}

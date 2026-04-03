@@ -20,11 +20,14 @@ export default function Login() {
     setError('')
     setSubmitting(true)
 
-    const { error } = await signIn(email, password)
+    const trimmedEmail = email.trim()
+    const { error } = await signIn(trimmedEmail, password)
     setSubmitting(false)
 
     if (error) {
-      setError('Invalid credentials.')
+      const msg = error.message?.trim() || 'Sign in failed.'
+      // Supabase returns actionable text (e.g. email not confirmed, invalid credentials).
+      setError(msg)
       return
     }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Hackathon, UserProfile } from '../types'
+import type { Hackathon, UserProfile, AccessRequest } from '../types'
 
 type HackathonForm = {
   title: string
@@ -18,9 +18,10 @@ const labelClass = 'font-mono text-[10px] tracking-widest uppercase text-white/3
 export default function Admin() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [form, setForm] = useState<HackathonForm>(emptyForm)
   const [editing, setEditing] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'hackathons' | 'users'>('hackathons')
+  const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,12 +29,14 @@ export default function Admin() {
   }, [])
 
   async function fetchAll() {
-    const [hackRes, userRes] = await Promise.all([
+    const [hackRes, userRes, reqRes] = await Promise.all([
       supabase.from('hackathons').select('*').order('date'),
       supabase.from('profiles').select('*').order('created_at'),
+      supabase.from('access_requests').select('*').order('created_at', { ascending: false }),
     ])
     if (hackRes.data) setHackathons(hackRes.data as Hackathon[])
     if (userRes.data) setUsers(userRes.data as UserProfile[])
+    if (reqRes.data) setRequests(reqRes.data as AccessRequest[])
     setLoading(false)
   }
 
@@ -70,6 +73,18 @@ export default function Admin() {
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
 
+  async function approveRequest(req: AccessRequest) {
+    await supabase.from('profiles').update({ approved: true }).eq('email', req.email)
+    // Optimistically update both states
+    setUsers((prev) => prev.map((u) => u.email === req.email ? { ...u, approved: true } : u))
+    await fetchAll()
+  }
+
+  async function dismissRequest(req: AccessRequest) {
+    await supabase.from('access_requests').delete().eq('id', req.id)
+    setRequests((prev) => prev.filter((r) => r.id !== req.id))
+  }
+
   async function toggleRole(u: UserProfile) {
     const updated = { role: u.role === 'admin' ? ('member' as const) : ('admin' as const) }
     await supabase.from('profiles').update(updated).eq('id', u.id)
@@ -85,7 +100,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <div className="flex gap-8 mb-12 border-b border-white/[0.07] pb-4">
-          {(['hackathons', 'users'] as const).map((tab) => (
+          {(['requests', 'users', 'hackathons'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -94,6 +109,9 @@ export default function Admin() {
               }`}
             >
               {tab}
+              {tab === 'requests' && requests.length > 0 && (
+                <span className="ml-2 text-white/30">({requests.length})</span>
+              )}
             </button>
           ))}
         </div>
@@ -206,6 +224,51 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'requests' ? (
+          /* Requests tab */
+          <div>
+            <p className={labelClass}>Pending Requests</p>
+            {requests.length === 0 ? (
+              <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mt-6">No pending requests</p>
+            ) : (
+              <div className="mt-6 divide-y divide-white/[0.07]">
+                {requests.map((req) => {
+                  const profile = users.find((u) => u.email === req.email)
+                  const alreadyApproved = profile?.approved === true
+                  return (
+                    <div key={req.id} className="py-6">
+                      <div className="flex items-start justify-between gap-8">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
+                          <p className="font-mono text-[10px] tracking-wider text-white/25 mb-3">{req.email}</p>
+                          <p className="font-sans text-xs text-white/40 leading-relaxed max-w-md">{req.reason}</p>
+                          {alreadyApproved && (
+                            <p className="font-mono text-[10px] tracking-widest uppercase text-white/30 mt-2">Already approved</p>
+                          )}
+                        </div>
+                        <div className="flex gap-5 pt-1 flex-shrink-0">
+                          {!alreadyApproved && (
+                            <button
+                              onClick={() => approveRequest(req)}
+                              className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/70 transition-colors duration-500"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          <button
+                            onClick={() => dismissRequest(req)}
+                            className="font-mono text-[10px] tracking-widest uppercase text-white/15 hover:text-white/40 transition-colors duration-500"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

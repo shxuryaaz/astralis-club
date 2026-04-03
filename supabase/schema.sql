@@ -56,6 +56,14 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS access_requests (
+  id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  name       TEXT        NOT NULL,
+  email      TEXT        NOT NULL,
+  reason     TEXT        NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ────────────────────────────────────────────────────────────
 -- Security-definer helpers (avoids RLS recursion)
 -- Using plpgsql to prevent compile-time column validation errors
@@ -92,17 +100,21 @@ $$;
 -- Row Level Security
 -- ────────────────────────────────────────────────────────────
 
-ALTER TABLE profiles   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE hackathons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hackathons      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE access_requests ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies before recreating (safe re-run)
-DROP POLICY IF EXISTS "profiles_select"          ON profiles;
-DROP POLICY IF EXISTS "profiles_update_admin"    ON profiles;
-DROP POLICY IF EXISTS "hackathons_select"        ON hackathons;
-DROP POLICY IF EXISTS "hackathons_write_admin"   ON hackathons;
-DROP POLICY IF EXISTS "messages_select"          ON messages;
-DROP POLICY IF EXISTS "messages_insert"          ON messages;
+DROP POLICY IF EXISTS "profiles_select"               ON profiles;
+DROP POLICY IF EXISTS "profiles_update_admin"         ON profiles;
+DROP POLICY IF EXISTS "hackathons_select"             ON hackathons;
+DROP POLICY IF EXISTS "hackathons_write_admin"        ON hackathons;
+DROP POLICY IF EXISTS "messages_select"               ON messages;
+DROP POLICY IF EXISTS "messages_insert"               ON messages;
+DROP POLICY IF EXISTS "access_requests_insert"        ON access_requests;
+DROP POLICY IF EXISTS "access_requests_select_admin"  ON access_requests;
+DROP POLICY IF EXISTS "access_requests_delete_admin"  ON access_requests;
 
 -- profiles ───────────────────────────────────────────────────
 
@@ -135,6 +147,23 @@ CREATE POLICY "messages_select"
 CREATE POLICY "messages_insert"
   ON messages FOR INSERT
   WITH CHECK (auth.uid()::text = user_id::text AND is_approved());
+
+-- access_requests ────────────────────────────────────────────
+
+-- Anyone (including anonymous) can submit a request
+CREATE POLICY "access_requests_insert"
+  ON access_requests FOR INSERT
+  WITH CHECK (true);
+
+-- Only admins can read requests
+CREATE POLICY "access_requests_select_admin"
+  ON access_requests FOR SELECT
+  USING (get_my_role() = 'admin');
+
+-- Only admins can dismiss (delete) requests
+CREATE POLICY "access_requests_delete_admin"
+  ON access_requests FOR DELETE
+  USING (get_my_role() = 'admin');
 
 -- ────────────────────────────────────────────────────────────
 -- Auto-create profile row on new signup
@@ -172,13 +201,18 @@ ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 -- ────────────────────────────────────────────────────────────
 -- Notes
 -- ────────────────────────────────────────────────────────────
--- 1. After running this schema, create your first user via
---    Supabase Dashboard → Authentication → Users → Invite user
---    or sign up via the app login form.
+-- 1. User flow:
+--    a. User fills /request form (name, email, reason, password)
+--    b. App calls supabase.auth.signUp() → trigger creates profile (approved=false)
+--    c. Reason is stored in access_requests for admin context
+--    d. Admin goes to /admin → Requests tab → clicks Approve
+--    e. User can now sign in at /login
 --
--- 2. To make the first user an admin, run:
+-- 2. To bootstrap YOUR admin account (first time only), run:
 --    UPDATE profiles SET approved = true, role = 'admin'
 --    WHERE email = 'your@email.com';
 --
--- 3. After that, the admin can approve/promote other users
---    directly from the /admin panel in the app.
+-- 3. IMPORTANT: Disable email confirmation in Supabase to avoid
+--    users needing to confirm email before profile is usable:
+--    Dashboard → Authentication → Email → Confirm email = OFF
+--    (Optional but recommended for this approval-gated flow)

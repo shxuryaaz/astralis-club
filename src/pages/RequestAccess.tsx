@@ -5,15 +5,16 @@ import { motion, AnimatePresence } from 'motion/react'
 import { supabase } from '../lib/supabase'
 
 const steps = [
-  { field: 'name',   label: '01', question: "What's your name?",        placeholder: 'Full name',                    type: 'text'     },
-  { field: 'email',  label: '02', question: 'Your email.',              placeholder: 'you@domain.com',               type: 'email'    },
-  { field: 'reason', label: '03', question: 'Why do you belong here?',  placeholder: 'What you build. Why Astralis.', type: 'textarea' },
+  { field: 'name',     label: '01', question: "What's your name?",        placeholder: 'Full name',                     type: 'text'     },
+  { field: 'email',    label: '02', question: 'Your email.',              placeholder: 'you@domain.com',                type: 'email'    },
+  { field: 'reason',   label: '03', question: 'Why do you belong here?',  placeholder: 'What you build. Why Astralis.',  type: 'textarea' },
+  { field: 'password', label: '04', question: 'Set a password.',          placeholder: '••••••••',                      type: 'password' },
 ]
 
 export default function RequestAccess() {
   const navigate = useNavigate()
   const [current, setCurrent] = useState(0)
-  const [values, setValues] = useState({ name: '', email: '', reason: '' })
+  const [values, setValues] = useState({ name: '', email: '', reason: '', password: '' })
   const [direction, setDirection] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -46,16 +47,29 @@ export default function RequestAccess() {
 
   async function handleSubmit() {
     setSubmitting(true)
-    const { error } = await supabase.from('access_requests').insert({
+
+    // Create the Supabase auth account (triggers profile creation)
+    const { error: authError } = await supabase.auth.signUp({
+      email: values.email.trim().toLowerCase(),
+      password: values.password,
+      options: { data: { name: values.name.trim() } },
+    })
+
+    if (authError) {
+      const alreadyExists = authError.message?.toLowerCase().includes('already registered')
+        || authError.message?.toLowerCase().includes('already exists')
+      setError(alreadyExists ? 'That email is already registered. Try signing in.' : 'Something went wrong. Try again.')
+      setSubmitting(false)
+      return
+    }
+
+    // Store reason for admin to review
+    await supabase.from('access_requests').insert({
       name: values.name.trim(),
       email: values.email.trim().toLowerCase(),
       reason: values.reason.trim(),
     })
-    if (error) {
-      setError('Something went wrong. Try again.')
-      setSubmitting(false)
-      return
-    }
+
     setDone(true)
   }
 
@@ -86,7 +100,9 @@ export default function RequestAccess() {
               <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/40">Received</p>
               <p className="font-sans font-light text-2xl text-white tracking-wide">We'll be in touch.</p>
               <p className="font-sans text-sm text-white/40 leading-relaxed">
-                If selected, you'll hear from us at {values.email}.
+                Once approved, sign in at{' '}
+                <span className="text-white/60">/login</span>{' '}
+                using the email and password you just set.
               </p>
               <div className="pt-6">
                 <Link to="/" className="font-mono text-[9px] tracking-widest uppercase text-white/30 hover:text-white/60 transition-colors duration-500">
