@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null)
 
       if (session?.user) {
+        // Re-enter loading so ProtectedRoute stays on <Loader /> while we fetch the
+        // profile — this covers the post-login case where loading was already false.
+        setLoading(true)
         const p = await fetchProfile(session.user.id)
         if (!mounted) return
         setProfile(p)
