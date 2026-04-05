@@ -194,10 +194,21 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- ────────────────────────────────────────────────────────────
--- Enable Realtime for the messages table
+-- Enable Realtime for the messages table (safe to re-run)
 -- ────────────────────────────────────────────────────────────
 
-ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+  END IF;
+END $$;
 
 -- ────────────────────────────────────────────────────────────
 -- Notes

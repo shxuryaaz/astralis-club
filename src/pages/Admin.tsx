@@ -23,6 +23,15 @@ export default function Admin() {
   const [editing, setEditing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
   const [loading, setLoading] = useState(true)
+  const [requestError, setRequestError] = useState('')
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null)
+
+  const normEmail = (e: string) => e.trim().toLowerCase()
+
+  function profileForRequestEmail(email: string) {
+    const n = normEmail(email)
+    return users.find((u) => normEmail(u.email) === n)
+  }
 
   useEffect(() => {
     fetchAll()
@@ -34,6 +43,9 @@ export default function Admin() {
       supabase.from('profiles').select('*').order('created_at'),
       supabase.from('access_requests').select('*').order('created_at', { ascending: false }),
     ])
+    if (hackRes.error) console.error('hackathons:', hackRes.error.message)
+    if (userRes.error) console.error('profiles:', userRes.error.message)
+    if (reqRes.error) console.error('access_requests:', reqRes.error.message)
     if (hackRes.data) setHackathons(hackRes.data as Hackathon[])
     if (userRes.data) setUsers(userRes.data as UserProfile[])
     if (reqRes.data) setRequests(reqRes.data as AccessRequest[])
@@ -74,15 +86,52 @@ export default function Admin() {
   }
 
   async function approveRequest(req: AccessRequest) {
-    await supabase.from('profiles').update({ approved: true }).eq('email', req.email)
-    // Optimistically update both states
-    setUsers((prev) => prev.map((u) => u.email === req.email ? { ...u, approved: true } : u))
+    setRequestError('')
+    setBusyRequestId(req.id)
+    const match = profileForRequestEmail(req.email)
+    const q = match
+      ? supabase.from('profiles').update({ approved: true }).eq('id', match.id).select('id')
+      : supabase
+          .from('profiles')
+          .update({ approved: true })
+          .ilike('email', normEmail(req.email))
+          .select('id')
+
+    const { data, error } = await q
+
+    if (error) {
+      setRequestError(error.message)
+      setBusyRequestId(null)
+      return
+    }
+    if (!data?.length) {
+      setRequestError(
+        'No profile matches this email (case mismatch or they have not finished sign-up). Use the Users tab or check Supabase → Authentication → Users.'
+      )
+      setBusyRequestId(null)
+      return
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (normEmail(u.email) === normEmail(req.email) ? { ...u, approved: true } : u))
+    )
+    await supabase.from('access_requests').delete().eq('id', req.id)
+    setRequests((prev) => prev.filter((r) => r.id !== req.id))
     await fetchAll()
+    setBusyRequestId(null)
   }
 
   async function dismissRequest(req: AccessRequest) {
-    await supabase.from('access_requests').delete().eq('id', req.id)
+    setRequestError('')
+    setBusyRequestId(req.id)
+    const { error } = await supabase.from('access_requests').delete().eq('id', req.id)
+    if (error) {
+      setRequestError(error.message)
+      setBusyRequestId(null)
+      return
+    }
     setRequests((prev) => prev.filter((r) => r.id !== req.id))
+    setBusyRequestId(null)
   }
 
   async function toggleRole(u: UserProfile) {
@@ -231,13 +280,19 @@ export default function Admin() {
           /* Requests tab */
           <div>
             <p className={labelClass}>Pending Requests</p>
+            {requestError && (
+              <p className="font-mono text-[10px] text-amber-200/80 mt-4 max-w-xl leading-relaxed">
+                {requestError}
+              </p>
+            )}
             {requests.length === 0 ? (
               <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mt-6">No pending requests</p>
             ) : (
               <div className="mt-6 divide-y divide-white/[0.07]">
                 {requests.map((req) => {
-                  const profile = users.find((u) => u.email === req.email)
+                  const profile = profileForRequestEmail(req.email)
                   const alreadyApproved = profile?.approved === true
+                  const busy = busyRequestId === req.id
                   return (
                     <div key={req.id} className="py-6">
                       <div className="flex items-start justify-between gap-8">
@@ -252,15 +307,19 @@ export default function Admin() {
                         <div className="flex gap-5 pt-1 flex-shrink-0">
                           {!alreadyApproved && (
                             <button
+                              type="button"
+                              disabled={busy}
                               onClick={() => approveRequest(req)}
-                              className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/70 transition-colors duration-500"
+                              className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/70 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
                             >
-                              Approve
+                              {busy ? '…' : 'Approve'}
                             </button>
                           )}
                           <button
+                            type="button"
+                            disabled={busy}
                             onClick={() => dismissRequest(req)}
-                            className="font-mono text-[10px] tracking-widest uppercase text-white/15 hover:text-white/40 transition-colors duration-500"
+                            className="font-mono text-[10px] tracking-widest uppercase text-white/15 hover:text-white/40 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
                           >
                             Dismiss
                           </button>
