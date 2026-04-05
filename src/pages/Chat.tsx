@@ -18,6 +18,7 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [lastSent, setLastSent] = useState(0)
+  const [sendError, setSendError] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -55,13 +56,18 @@ export default function Chat() {
     if (!trimmed || !user || !profile) return
     const now = Date.now()
     if (now - lastSent < RATE_LIMIT_MS) return
+    setSendError('')
     setInput('')
     setLastSent(now)
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       user_id: user.id,
       sender_name: profile.name,
       content: trimmed.slice(0, MAX_LENGTH),
     })
+    if (error) {
+      setInput(trimmed)
+      setSendError('Failed to send. Try again.')
+    }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -106,6 +112,9 @@ export default function Chat() {
 
       {/* Input */}
       <div className="border-t border-white/[0.07] px-4 md:px-8 py-4 md:py-5 flex-shrink-0">
+        {sendError && (
+          <p className="font-mono text-[10px] text-amber-200/70 mb-3 max-w-2xl">{sendError}</p>
+        )}
         <form onSubmit={handleSend} className="max-w-2xl flex items-center gap-4 md:gap-6">
           <div className="flex-1 relative">
             <input

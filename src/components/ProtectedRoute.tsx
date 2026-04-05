@@ -33,10 +33,12 @@ export default function ProtectedRoute() {
   if (loading) return <Loader />
   if (!user) return <Navigate to="/login" replace />
 
+  // Profile is still being fetched (user just signed in) — don't flash "Access Pending"
+  if (profile === null) return <Loader />
+
   // Admins always pass — otherwise an admin with approved=false (DB default) can never
   // reach /admin to approve anyone, including themselves.
-  const hasAccess =
-    profile?.role === 'admin' || profile?.approved === true
+  const hasAccess = profile.role === 'admin' || profile.approved === true
   if (!hasAccess) return <AccessPending />
 
   return <Outlet />

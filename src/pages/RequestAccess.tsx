@@ -64,11 +64,17 @@ export default function RequestAccess() {
     }
 
     // Store reason for admin to review
-    await supabase.from('access_requests').insert({
+    const { error: reqError } = await supabase.from('access_requests').insert({
       name: values.name.trim(),
       email: values.email.trim().toLowerCase(),
       reason: values.reason.trim(),
     })
+
+    if (reqError) {
+      setError('Account created, but we could not submit your request. Please contact us directly.')
+      setSubmitting(false)
+      return
+    }
 
     setDone(true)
   }

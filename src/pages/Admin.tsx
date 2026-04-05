@@ -23,7 +23,8 @@ export default function Admin() {
   const [editing, setEditing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
   const [loading, setLoading] = useState(true)
-  const [requestError, setRequestError] = useState('')
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
+  const [hackathonError, setHackathonError] = useState('')
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null)
 
   const normEmail = (e: string) => e.trim().toLowerCase()
@@ -31,6 +32,15 @@ export default function Admin() {
   function profileForRequestEmail(email: string) {
     const n = normEmail(email)
     return users.find((u) => normEmail(u.email) === n)
+  }
+
+  type RequestLinkStatus = 'no_profile' | 'pending' | 'approved'
+
+  function requestLinkStatus(req: AccessRequest): RequestLinkStatus {
+    const p = profileForRequestEmail(req.email)
+    if (!p) return 'no_profile'
+    if (p.approved) return 'approved'
+    return 'pending'
   }
 
   useEffect(() => {
@@ -54,18 +64,23 @@ export default function Admin() {
 
   async function handleHackathonSubmit(e: FormEvent) {
     e.preventDefault()
+    setHackathonError('')
     if (editing) {
-      await supabase.from('hackathons').update(form).eq('id', editing)
+      const { error } = await supabase.from('hackathons').update(form).eq('id', editing)
+      if (error) { setHackathonError(error.message); return }
       setEditing(null)
     } else {
-      await supabase.from('hackathons').insert(form)
+      const { error } = await supabase.from('hackathons').insert(form)
+      if (error) { setHackathonError(error.message); return }
     }
     setForm(emptyForm)
     fetchAll()
   }
 
   async function handleDelete(id: string) {
-    await supabase.from('hackathons').delete().eq('id', id)
+    setHackathonError('')
+    const { error } = await supabase.from('hackathons').delete().eq('id', id)
+    if (error) { setHackathonError(error.message); return }
     setHackathons((prev) => prev.filter((h) => h.id !== id))
   }
 
@@ -81,12 +96,13 @@ export default function Admin() {
 
   async function toggleApproval(u: UserProfile) {
     const updated = { approved: !u.approved }
-    await supabase.from('profiles').update(updated).eq('id', u.id)
+    const { error } = await supabase.from('profiles').update(updated).eq('id', u.id)
+    if (error) { setRowError({ id: u.id, message: error.message }); return }
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
 
   async function approveRequest(req: AccessRequest) {
-    setRequestError('')
+    setRowError(null)
     setBusyRequestId(req.id)
     const match = profileForRequestEmail(req.email)
     const q = match
@@ -100,14 +116,16 @@ export default function Admin() {
     const { data, error } = await q
 
     if (error) {
-      setRequestError(error.message)
+      setRowError({ id: req.id, message: error.message })
       setBusyRequestId(null)
       return
     }
     if (!data?.length) {
-      setRequestError(
-        'No profile matches this email (case mismatch or they have not finished sign-up). Use the Users tab or check Supabase → Authentication → Users.'
-      )
+      setRowError({
+        id: req.id,
+        message:
+          'No row in Members (profiles) for this email — signup may have failed or the email differs. Dismiss clears this application only; fix the account in Supabase if needed.',
+      })
       setBusyRequestId(null)
       return
     }
@@ -122,11 +140,11 @@ export default function Admin() {
   }
 
   async function dismissRequest(req: AccessRequest) {
-    setRequestError('')
+    setRowError(null)
     setBusyRequestId(req.id)
     const { error } = await supabase.from('access_requests').delete().eq('id', req.id)
     if (error) {
-      setRequestError(error.message)
+      setRowError({ id: req.id, message: error.message })
       setBusyRequestId(null)
       return
     }
@@ -134,11 +152,34 @@ export default function Admin() {
     setBusyRequestId(null)
   }
 
+  async function clearApprovedFromQueue() {
+    const ids = requests.filter((r) => requestLinkStatus(r) === 'approved').map((r) => r.id)
+    if (ids.length === 0) return
+    setRowError(null)
+    setBusyRequestId('__bulk__')
+    for (const id of ids) {
+      const { error } = await supabase.from('access_requests').delete().eq('id', id)
+      if (error) {
+        setRowError({ id, message: error.message })
+        setBusyRequestId(null)
+        await fetchAll()
+        return
+      }
+    }
+    setRequests((prev) => prev.filter((r) => !ids.includes(r.id)))
+    await fetchAll()
+    setBusyRequestId(null)
+  }
+
   async function toggleRole(u: UserProfile) {
     const updated = { role: u.role === 'admin' ? ('member' as const) : ('admin' as const) }
-    await supabase.from('profiles').update(updated).eq('id', u.id)
+    const { error } = await supabase.from('profiles').update(updated).eq('id', u.id)
+    if (error) { setRowError({ id: u.id, message: error.message }); return }
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
+
+  const approvedInQueueCount = requests.filter((r) => requestLinkStatus(r) === 'approved').length
+  const bulkBusy = busyRequestId === '__bulk__'
 
   return (
     <div className="min-h-screen bg-black">
@@ -240,6 +281,9 @@ export default function Admin() {
                     </button>
                   )}
                 </div>
+                {hackathonError && (
+                  <p className="font-mono text-[10px] text-amber-200/80 mt-4 leading-relaxed">{hackathonError}</p>
+                )}
               </form>
             </div>
 
@@ -277,42 +321,60 @@ export default function Admin() {
             )}
           </div>
         ) : activeTab === 'requests' ? (
-          /* Requests tab */
+          /* Requests tab — access_requests rows; independent from profiles until you approve/dismiss */
           <div>
-            <p className={labelClass}>Pending Requests</p>
-            {requestError && (
-              <p className="font-mono text-[10px] text-amber-200/80 mt-4 max-w-xl leading-relaxed">
-                {requestError}
-              </p>
+            <p className={labelClass}>Request queue</p>
+            <p className="font-sans text-xs text-white/35 max-w-2xl mt-3 leading-relaxed">
+              These are saved applications from the site. The list does not auto-clear: approving a member updates
+              their profile but leaves the row here until you dismiss it (or use clear below). If there is no matching
+              row under Members for that email, Approve is disabled — the application can still be dismissed.
+            </p>
+            {requests.length > 0 && approvedInQueueCount > 0 && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => clearApprovedFromQueue()}
+                  className="font-mono text-[10px] tracking-widest uppercase text-white/40 border border-white/15 px-4 py-2 hover:border-white/35 hover:text-white/70 transition-all duration-500 disabled:opacity-25"
+                >
+                  {bulkBusy ? 'Clearing…' : `Clear ${approvedInQueueCount} already-approved from queue`}
+                </button>
+              </div>
             )}
             {requests.length === 0 ? (
-              <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mt-6">No pending requests</p>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mt-6">Queue is empty</p>
             ) : (
-              <div className="mt-6 divide-y divide-white/[0.07]">
+              <div className="mt-8 divide-y divide-white/[0.07]">
                 {requests.map((req) => {
-                  const profile = profileForRequestEmail(req.email)
-                  const alreadyApproved = profile?.approved === true
-                  const busy = busyRequestId === req.id
+                  const link = requestLinkStatus(req)
+                  const busy = busyRequestId === req.id || bulkBusy
                   return (
                     <div key={req.id} className="py-6">
                       <div className="flex items-start justify-between gap-8">
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
-                          <p className="font-mono text-[10px] tracking-wider text-white/25 mb-3">{req.email}</p>
+                          <p className="font-mono text-[10px] tracking-wider text-white/25 mb-2">{req.email}</p>
+                          <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/25">
+                            {link === 'no_profile' && 'No member profile for this email'}
+                            {link === 'pending' && 'Linked · access not approved yet'}
+                            {link === 'approved' && 'Already approved in Members — dismiss to remove from queue'}
+                          </p>
                           <p className="font-sans text-xs text-white/40 leading-relaxed max-w-md">{req.reason}</p>
-                          {alreadyApproved && (
-                            <p className="font-mono text-[10px] tracking-widest uppercase text-white/30 mt-2">Already approved</p>
+                          {rowError?.id === req.id && (
+                            <p className="font-mono text-[10px] text-amber-200/80 mt-3 max-w-md leading-relaxed">
+                              {rowError.message}
+                            </p>
                           )}
                         </div>
                         <div className="flex gap-5 pt-1 flex-shrink-0">
-                          {!alreadyApproved && (
+                          {link === 'pending' && (
                             <button
                               type="button"
                               disabled={busy}
                               onClick={() => approveRequest(req)}
                               className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/70 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
                             >
-                              {busy ? '…' : 'Approve'}
+                              {busy && busyRequestId === req.id ? '…' : 'Approve'}
                             </button>
                           )}
                           <button
@@ -356,6 +418,9 @@ export default function Admin() {
                         {u.role}
                       </span>
                     </div>
+                    {rowError?.id === u.id && (
+                      <p className="font-mono text-[10px] text-amber-200/80 mt-2 max-w-sm leading-relaxed">{rowError.message}</p>
+                    )}
                   </div>
                   <div className="flex gap-5 pt-1 flex-shrink-0">
                     <button
