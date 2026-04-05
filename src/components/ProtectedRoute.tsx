@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 function Loader() {
   return (
@@ -12,15 +13,29 @@ function Loader() {
 }
 
 function AccessPending() {
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+
+  async function handleSignOut() {
+    await signOut()
+    navigate('/login')
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-center space-y-3">
+      <div className="text-center space-y-5">
         <p className="font-mono text-xs tracking-widest uppercase text-white/40">
           Access Pending
         </p>
         <p className="font-sans text-sm text-white/20 max-w-xs">
           Your account is awaiting approval.
         </p>
+        <button
+          onClick={handleSignOut}
+          className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/50 transition-colors duration-500"
+        >
+          Sign out
+        </button>
       </div>
     </div>
   )
