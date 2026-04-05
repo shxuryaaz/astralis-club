@@ -89,8 +89,9 @@ STABLE
 SET search_path = public
 AS $$
 BEGIN
+  -- Admins bypass the approval flag so RLS matches the app (see ProtectedRoute).
   RETURN COALESCE(
-    (SELECT approved FROM profiles WHERE id::text = auth.uid()::text),
+    (SELECT (approved OR role = 'admin') FROM profiles WHERE id::text = auth.uid()::text),
     false
   );
 END;
@@ -208,9 +209,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 --    d. Admin goes to /admin → Requests tab → clicks Approve
 --    e. User can now sign in at /login
 --
--- 2. To bootstrap YOUR admin account (first time only), run:
---    UPDATE profiles SET approved = true, role = 'admin'
---    WHERE email = 'your@email.com';
+-- 2. To bootstrap YOUR admin account (first time only), run either:
+--      UPDATE profiles SET approved = true, role = 'admin' WHERE email = 'your@email.com';
+--    or (role = admin alone is enough for app + RLS once is_approved() includes admins):
+--      UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 --
 -- 3. IMPORTANT: Disable email confirmation in Supabase to avoid
 --    users needing to confirm email before profile is usable:

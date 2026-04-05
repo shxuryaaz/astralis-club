@@ -32,8 +32,12 @@ export default function ProtectedRoute() {
   // Wait for both auth + profile to resolve
   if (loading) return <Loader />
   if (!user) return <Navigate to="/login" replace />
-  // Profile loaded but not approved (or doesn't exist)
-  if (!profile?.approved) return <AccessPending />
+
+  // Admins always pass — otherwise an admin with approved=false (DB default) can never
+  // reach /admin to approve anyone, including themselves.
+  const hasAccess =
+    profile?.role === 'admin' || profile?.approved === true
+  if (!hasAccess) return <AccessPending />
 
   return <Outlet />
 }
