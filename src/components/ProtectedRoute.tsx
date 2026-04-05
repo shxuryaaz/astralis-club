@@ -12,7 +12,7 @@ function Loader() {
 }
 
 function AccessPending() {
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
@@ -23,6 +23,9 @@ function AccessPending() {
         <p className="font-sans text-sm text-white/20 max-w-xs">
           Your account is awaiting approval.
         </p>
+        {user?.email && (
+          <p className="font-mono text-[10px] text-white/15">{user.email}</p>
+        )}
         <button
           type="button"
           onClick={async () => {

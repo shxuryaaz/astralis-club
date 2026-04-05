@@ -1,16 +1,19 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import AstralisBackground from '../components/AstralisBackground'
 
 export default function Login() {
   const { user, loading, signIn } = useAuth()
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Once auth state resolves with a user, redirect to dashboard.
+  // This handles both the "already logged in" case and the post-login redirect —
+  // no manual navigate() needed, which avoids the race where the route renders
+  // before the auth state has propagated.
   if (!loading && user) {
     return <Navigate to="/dashboard" replace />
   }
@@ -20,18 +23,18 @@ export default function Login() {
     setError('')
     setSubmitting(true)
 
-    const trimmedEmail = email.trim()
-    const { error } = await signIn(trimmedEmail, password)
-    setSubmitting(false)
+    const { error } = await signIn(email.trim(), password)
 
     if (error) {
-      const msg = error.message?.trim() || 'Sign in failed.'
-      // Supabase returns actionable text (e.g. email not confirmed, invalid credentials).
-      setError(msg)
+      setSubmitting(false)
+      setError(error.message?.trim() || 'Sign in failed.')
       return
     }
 
-    navigate('/dashboard', { replace: true })
+    // Don't call navigate() here. onAuthStateChange will fire, set loading=true,
+    // fetch the profile, then set loading=false with user set — at which point
+    // the `if (!loading && user)` guard above redirects automatically.
+    // Keeping submitting=true gives visual feedback until that redirect happens.
   }
 
   return (

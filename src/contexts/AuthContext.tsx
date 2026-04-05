@@ -49,38 +49,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Safety net: never hang forever
-    const timeout = setTimeout(() => {
-      if (mounted) {
-        console.warn('Auth loading timeout — forcing loading=false')
-        setLoading(false)
-      }
-    }, 5000)
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Applies a session to state — fetches profile if user exists.
+    // Used by both getSession() (initial load) and onAuthStateChange (subsequent events).
+    async function applySession(s: Session | null) {
       if (!mounted) return
+      setSession(s)
+      setUser(s?.user ?? null)
 
-      setSession(session)
-      setUser(session?.user ?? null)
-
-      if (session?.user) {
-        // Re-enter loading so ProtectedRoute stays on <Loader /> while we fetch the
-        // profile — this covers the post-login case where loading was already false.
-        setLoading(true)
-        const p = await fetchProfile(session.user.id)
+      if (s?.user) {
+        const p = await fetchProfile(s.user.id)
         if (!mounted) return
         setProfile(p)
       } else {
         setProfile(null)
       }
 
-      clearTimeout(timeout)
-      setLoading(false)
+      if (mounted) setLoading(false)
+    }
+
+    // STEP 1: Read the stored session immediately (fast, synchronous-ish).
+    // This handles page reloads where the user is already signed in.
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => applySession(session))
+      .catch(() => { if (mounted) setLoading(false) })
+
+    // STEP 2: Listen for future auth events (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED).
+    // Skip INITIAL_SESSION — it duplicates what getSession() already handles.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return
+      if (!mounted) return
+      setLoading(true)  // show loader while we fetch the new profile
+      applySession(session)
     })
 
     return () => {
       mounted = false
-      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [])
@@ -96,10 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error('signOut error:', e)
     }
-    // Always clear state regardless of whether Supabase call succeeded
+    // Always clear state, even if the Supabase call failed
     setUser(null)
     setProfile(null)
     setSession(null)
+    setLoading(false)
   }
 
   return (
