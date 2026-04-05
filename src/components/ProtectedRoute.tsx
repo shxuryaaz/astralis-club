@@ -25,7 +25,10 @@ function AccessPending() {
         </p>
         <button
           type="button"
-          onClick={() => signOut()}
+          onClick={async () => {
+            await signOut()
+            window.location.href = '/'
+          }}
           className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/50 transition-colors duration-500"
         >
           Sign out
