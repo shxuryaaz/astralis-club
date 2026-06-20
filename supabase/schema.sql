@@ -179,7 +179,7 @@ AS $$
 BEGIN
   INSERT INTO profiles (id, name, email)
   VALUES (
-    NEW.id::text,
+    NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.email
   )

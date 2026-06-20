@@ -60,6 +60,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const p = await fetchProfile(s.user.id)
         if (!mounted) return
         setProfile(p)
+
+        // After Google OAuth signup, submit the pending access request that was
+        // saved to sessionStorage before the OAuth redirect in RequestAccess.
+        const pendingRaw = sessionStorage.getItem('astralis_pending_request')
+        if (pendingRaw) {
+          try {
+            const pending = JSON.parse(pendingRaw)
+            sessionStorage.removeItem('astralis_pending_request')
+            await supabase.from('access_requests').insert({
+              name: pending.name || p?.name || '',
+              email: pending.email || s.user.email || '',
+              reason: pending.reason || '',
+            })
+          } catch {
+            // non-critical — admin can still see the user in Members tab
+          }
+        }
       } else {
         setProfile(null)
       }

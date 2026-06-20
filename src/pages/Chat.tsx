@@ -17,7 +17,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
-  const [lastSent, setLastSent] = useState(0)
+  const [rateLimited, setRateLimited] = useState(false)
   const [sendError, setSendError] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -53,12 +53,11 @@ export default function Chat() {
   async function handleSend(e?: FormEvent) {
     e?.preventDefault()
     const trimmed = input.trim()
-    if (!trimmed || !user || !profile) return
-    const now = Date.now()
-    if (now - lastSent < RATE_LIMIT_MS) return
+    if (!trimmed || !user || !profile || rateLimited) return
     setSendError('')
     setInput('')
-    setLastSent(now)
+    setRateLimited(true)
+    setTimeout(() => setRateLimited(false), RATE_LIMIT_MS)
     const { error } = await supabase.from('messages').insert({
       user_id: user.id,
       sender_name: profile.name,
@@ -74,7 +73,7 @@ export default function Chat() {
     if (e.key === 'Enter') { e.preventDefault(); handleSend() }
   }
 
-  const canSend = input.trim().length > 0 && Date.now() - lastSent >= RATE_LIMIT_MS
+  const canSend = input.trim().length > 0 && !rateLimited
   const charsLeft = MAX_LENGTH - input.length
 
   return (
