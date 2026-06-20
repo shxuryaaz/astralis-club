@@ -11,9 +11,16 @@ type HackathonForm = {
 
 const emptyForm: HackathonForm = { title: '', date: '', mode: 'online', description: '' }
 
+function formatTimestamp(dateStr: string) {
+  return new Date(dateStr).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
 const inputClass =
-  'w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-2 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/20'
-const labelClass = 'font-mono text-[10px] tracking-widest uppercase text-white/30 block mb-2'
+  'w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-2 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/42'
+const labelClass = 'font-mono text-[10px] tracking-widest uppercase text-white/55 block mb-2'
 
 export default function Admin() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([])
@@ -185,7 +192,7 @@ export default function Admin() {
     <div className="min-h-screen bg-black">
       <div className="max-w-3xl mx-auto px-8 py-16">
         <div className="mb-12">
-          <h1 className="font-mono text-[10px] tracking-widest uppercase text-white/30">Admin</h1>
+          <h1 className="font-mono text-[10px] tracking-widest uppercase text-white/55">Admin</h1>
         </div>
 
         {/* Tabs */}
@@ -195,19 +202,19 @@ export default function Admin() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`font-mono text-[10px] tracking-widest uppercase transition-colors duration-500 ${
-                activeTab === tab ? 'text-white/70' : 'text-white/25 hover:text-white/50'
+                activeTab === tab ? 'text-white/70' : 'text-white/48 hover:text-white/78'
               }`}
             >
               {tab}
               {tab === 'requests' && requests.length > 0 && (
-                <span className="ml-2 text-white/30">({requests.length})</span>
+                <span className="ml-2 text-white/55">({requests.length})</span>
               )}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <p className="font-mono text-[10px] tracking-widest uppercase text-white/20">Loading</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-white/42">Loading</p>
         ) : activeTab === 'hackathons' ? (
           <div className="space-y-16">
             {/* Form */}
@@ -267,7 +274,7 @@ export default function Admin() {
                 <div className="flex gap-6 pt-2">
                   <button
                     type="submit"
-                    className="font-mono text-[10px] tracking-widest uppercase text-white/50 border border-white/15 px-6 py-2 hover:border-white/40 hover:text-white/80 transition-all duration-500"
+                    className="font-mono text-[10px] tracking-widest uppercase text-white/78 border border-white/15 px-6 py-2 hover:border-white/40 hover:text-white/80 transition-all duration-500"
                   >
                     {editing ? 'Update' : 'Add'}
                   </button>
@@ -275,7 +282,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={cancelEdit}
-                      className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/50 transition-colors duration-500"
+                      className="font-mono text-[10px] tracking-widest uppercase text-white/42 hover:text-white/78 transition-colors duration-500"
                     >
                       Cancel
                     </button>
@@ -296,20 +303,20 @@ export default function Admin() {
                     <div key={h.id} className="py-6 flex items-start justify-between gap-8">
                       <div className="min-w-0">
                         <p className="font-sans text-sm text-white/75 mb-1">{h.title}</p>
-                        <p className="font-mono text-[10px] tracking-wider text-white/25 uppercase">
+                        <p className="font-mono text-[10px] tracking-wider text-white/48 uppercase">
                           {h.date} · {h.mode}
                         </p>
                       </div>
                       <div className="flex gap-5 pt-1 flex-shrink-0">
                         <button
                           onClick={() => handleEdit(h)}
-                          className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/60 transition-colors duration-500"
+                          className="font-mono text-[10px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(h.id)}
-                          className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/50 transition-colors duration-500"
+                          className="font-mono text-[10px] tracking-widest uppercase text-white/42 hover:text-white/78 transition-colors duration-500"
                         >
                           Delete
                         </button>
@@ -324,7 +331,7 @@ export default function Admin() {
           /* Requests tab — access_requests rows; independent from profiles until you approve/dismiss */
           <div>
             <p className={labelClass}>Request queue</p>
-            <p className="font-sans text-xs text-white/35 max-w-2xl mt-3 leading-relaxed">
+            <p className="font-sans text-xs text-white/62 max-w-2xl mt-3 leading-relaxed">
               These are saved applications from the site. The list does not auto-clear: approving a member updates
               their profile but leaves the row here until you dismiss it (or use clear below). If there is no matching
               row under Members for that email, Approve is disabled — the application can still be dismissed.
@@ -335,14 +342,14 @@ export default function Admin() {
                   type="button"
                   disabled={bulkBusy}
                   onClick={() => clearApprovedFromQueue()}
-                  className="font-mono text-[10px] tracking-widest uppercase text-white/40 border border-white/15 px-4 py-2 hover:border-white/35 hover:text-white/70 transition-all duration-500 disabled:opacity-25"
+                  className="font-mono text-[10px] tracking-widest uppercase text-white/68 border border-white/15 px-4 py-2 hover:border-white/35 hover:text-white/70 transition-all duration-500 disabled:opacity-25"
                 >
                   {bulkBusy ? 'Clearing…' : `Clear ${approvedInQueueCount} already-approved from queue`}
                 </button>
               </div>
             )}
             {requests.length === 0 ? (
-              <p className="font-mono text-[10px] tracking-widest uppercase text-white/20 mt-6">Queue is empty</p>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-white/42 mt-6">Queue is empty</p>
             ) : (
               <div className="mt-8 divide-y divide-white/[0.07]">
                 {requests.map((req) => {
@@ -353,13 +360,16 @@ export default function Admin() {
                       <div className="flex items-start justify-between gap-8">
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
-                          <p className="font-mono text-[10px] tracking-wider text-white/25 mb-2">{req.email}</p>
-                          <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/25">
+                          <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">{req.email}</p>
+                          <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/48">
                             {link === 'no_profile' && 'No member profile for this email'}
                             {link === 'pending' && 'Linked · access not approved yet'}
                             {link === 'approved' && 'Already approved in Members — dismiss to remove from queue'}
                           </p>
-                          <p className="font-sans text-xs text-white/40 leading-relaxed max-w-md">{req.reason}</p>
+                          <p className="font-sans text-xs text-white/68 leading-relaxed max-w-md">{req.reason}</p>
+                          <p className="font-mono text-[10px] tracking-wider text-white/35 mt-2">
+                            {formatTimestamp(req.created_at)}
+                          </p>
                           {rowError?.id === req.id && (
                             <p className="font-mono text-[10px] text-amber-200/80 mt-3 max-w-md leading-relaxed">
                               {rowError.message}
@@ -372,7 +382,7 @@ export default function Admin() {
                               type="button"
                               disabled={busy}
                               onClick={() => approveRequest(req)}
-                              className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/70 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
+                              className="font-mono text-[10px] tracking-widest uppercase text-white/55 hover:text-white/70 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
                             >
                               {busy && busyRequestId === req.id ? '…' : 'Approve'}
                             </button>
@@ -381,7 +391,7 @@ export default function Admin() {
                             type="button"
                             disabled={busy}
                             onClick={() => dismissRequest(req)}
-                            className="font-mono text-[10px] tracking-widest uppercase text-white/15 hover:text-white/40 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
+                            className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
                           >
                             Dismiss
                           </button>
@@ -402,19 +412,19 @@ export default function Admin() {
                 <div key={u.id} className="py-6 flex items-start justify-between gap-8">
                   <div className="min-w-0">
                     <p className="font-sans text-sm text-white/75 mb-1">{u.name}</p>
-                    <p className="font-mono text-[10px] tracking-wider text-white/25 mb-2">
+                    <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">
                       {u.email}
                     </p>
                     <div className="flex items-center gap-2">
                       <span
                         className={`font-mono text-[10px] tracking-widest uppercase ${
-                          u.approved ? 'text-white/50' : 'text-white/20'
+                          u.approved ? 'text-white/78' : 'text-white/42'
                         }`}
                       >
                         {u.approved ? 'Approved' : 'Pending'}
                       </span>
-                      <span className="font-mono text-[10px] text-white/15">·</span>
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-white/30">
+                      <span className="font-mono text-[10px] text-white/32">·</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-white/55">
                         {u.role}
                       </span>
                     </div>
@@ -425,13 +435,13 @@ export default function Admin() {
                   <div className="flex gap-5 pt-1 flex-shrink-0">
                     <button
                       onClick={() => toggleApproval(u)}
-                      className="font-mono text-[10px] tracking-widest uppercase text-white/30 hover:text-white/60 transition-colors duration-500"
+                      className="font-mono text-[10px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500"
                     >
                       {u.approved ? 'Revoke' : 'Approve'}
                     </button>
                     <button
                       onClick={() => toggleRole(u)}
-                      className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/50 transition-colors duration-500"
+                      className="font-mono text-[10px] tracking-widest uppercase text-white/42 hover:text-white/78 transition-colors duration-500"
                     >
                       {u.role === 'admin' ? 'Demote' : 'Promote'}
                     </button>

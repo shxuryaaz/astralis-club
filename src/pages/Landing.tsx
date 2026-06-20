@@ -22,7 +22,7 @@ export default function Landing() {
             Astralis
           </h1>
 
-          <p className="font-mono text-xs tracking-[0.3em] text-white/40 uppercase sm:text-sm mb-14">
+          <p className="font-mono text-xs tracking-[0.3em] text-white/68 uppercase sm:text-sm mb-14">
             Not a club. A cartel.
           </p>
 
@@ -41,7 +41,7 @@ export default function Landing() {
 
             <Link
               to="/login"
-              className="font-mono text-[10px] tracking-[0.35em] uppercase text-white/25 hover:text-white/60 transition-colors duration-500"
+              className="font-mono text-[10px] tracking-[0.35em] uppercase text-white/48 hover:text-white/60 transition-colors duration-500"
             >
               Sign In
             </Link>
@@ -70,7 +70,7 @@ export default function Landing() {
           transition={{ duration: 1 }}
           className="max-w-5xl mx-auto px-4 md:px-8 mb-16 md:mb-20"
         >
-          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/25">
+          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/48">
             02 // What We Are
           </p>
         </motion.div>
@@ -86,7 +86,7 @@ export default function Landing() {
           <h2 className="font-sans font-light text-4xl sm:text-5xl md:text-[3.75rem] leading-[1.15] tracking-wide">
             <span className="text-white/90">NIET's premier</span>
             <br />
-            <span className="text-white/40">quant &amp; fintech</span>
+            <span className="text-white/68">quant &amp; fintech</span>
             <br />
             <span className="text-white/90">collective.</span>
           </h2>
@@ -100,7 +100,7 @@ export default function Landing() {
           transition={{ duration: 1, delay: 0.2 }}
           className="max-w-5xl mx-auto px-4 md:px-8 mb-20 md:mb-28"
         >
-          <p className="font-sans text-sm text-white/30 leading-loose max-w-md">
+          <p className="font-sans text-sm text-white/55 leading-loose max-w-md">
             We model markets, build systems, and dominate hackathons.
             Closed by design. Selected by merit.
           </p>
@@ -133,14 +133,14 @@ export default function Landing() {
               transition={{ duration: 0.8, delay: i * 0.12, ease: 'easeOut' }}
               className="flex items-start gap-6 md:gap-12 py-7 md:py-9 border-t border-white/[0.07]"
             >
-              <span className="font-mono text-[10px] tracking-widest text-white/20 mt-[3px] w-5 flex-shrink-0">
+              <span className="font-mono text-[10px] tracking-widest text-white/42 mt-[3px] w-5 flex-shrink-0">
                 {p.index}
               </span>
               <div className="flex flex-col sm:flex-row sm:items-start sm:gap-12 flex-1 min-w-0">
                 <p className="font-sans text-sm text-white/65 tracking-wide mb-2 sm:mb-0 sm:w-44 flex-shrink-0">
                   {p.title}
                 </p>
-                <p className="font-sans text-sm text-white/28 leading-relaxed flex-1">
+                <p className="font-sans text-sm text-white/52 leading-relaxed flex-1">
                   {p.body}
                 </p>
               </div>
@@ -152,7 +152,7 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ── */}
-      <div className="relative z-20 border-t border-white/[0.07] px-8 py-8 flex justify-between items-center font-mono text-[9px] tracking-widest text-white/15 uppercase">
+      <div className="relative z-20 border-t border-white/[0.07] px-8 py-8 flex justify-between items-center font-mono text-[9px] tracking-widest text-white/32 uppercase">
         <span>01 // System Active</span>
         <span>2026 // Astralis</span>
       </div>

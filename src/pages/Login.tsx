@@ -70,13 +70,13 @@ export default function Login() {
 
       <div className="relative z-20 w-full max-w-xs px-6 md:px-8">
         <div className="mb-14">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-white/25">Astralis</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-white/48">Astralis</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">
           <div className="space-y-7">
             <div className="space-y-2">
-              <label className="font-mono text-[10px] tracking-widest uppercase text-white/30">Email</label>
+              <label className="font-mono text-[10px] tracking-widest uppercase text-white/55">Email</label>
               <input
                 type="email"
                 value={email}
@@ -84,12 +84,12 @@ export default function Login() {
                 required
                 autoComplete="email"
                 placeholder="you@domain.com"
-                className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/15"
+                className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/32"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="font-mono text-[10px] tracking-widest uppercase text-white/30">Password</label>
+              <label className="font-mono text-[10px] tracking-widest uppercase text-white/55">Password</label>
               <input
                 type="password"
                 value={password}
@@ -97,29 +97,29 @@ export default function Login() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/15"
+                className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/32"
               />
             </div>
           </div>
 
-          {error && <p className="font-mono text-[10px] tracking-wider text-white/35">{error}</p>}
+          {error && <p className="font-mono text-[10px] tracking-wider text-white/62">{error}</p>}
 
           <button
             type="submit"
             disabled={submitting || googleBusy}
-            className="w-full border border-white/15 text-white/50 font-mono text-[10px] tracking-widest uppercase py-4 hover:border-white/40 hover:text-white/80 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-full border border-white/15 text-white/78 font-mono text-[10px] tracking-widest uppercase py-4 hover:border-white/40 hover:text-white/80 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {submitting ? 'Authenticating' : 'Enter'}
           </button>
         </form>
 
         <div className="mt-10 flex flex-col items-center gap-5">
-          <span className="font-mono text-[10px] text-white/15 tracking-widest">or</span>
+          <span className="font-mono text-[10px] text-white/32 tracking-widest">or</span>
           <button
             type="button"
             onClick={handleGoogle}
             disabled={googleBusy || submitting}
-            className="w-full border border-white/10 text-white/30 font-mono text-[10px] tracking-widest uppercase py-4 hover:border-white/25 hover:text-white/60 transition-all duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full border border-white/10 text-white/55 font-mono text-[10px] tracking-widest uppercase py-4 hover:border-white/25 hover:text-white/60 transition-all duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
             <GoogleIcon />
             {googleBusy ? 'Redirecting' : 'Continue with Google'}

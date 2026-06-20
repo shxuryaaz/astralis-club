@@ -14,7 +14,7 @@ export default function Layout() {
   function navClass(path: string) {
     const active = location.pathname === path
     return `font-mono text-[10px] tracking-widest uppercase transition-colors duration-500 ${
-      active ? 'text-white/70' : 'text-white/25 hover:text-white/55'
+      active ? 'text-white/70' : 'text-white/48 hover:text-white/82'
     }`
   }
 
@@ -24,7 +24,7 @@ export default function Layout() {
         <div className="max-w-4xl mx-auto px-4 md:px-8 h-11 flex items-center justify-between">
           <Link
             to="/"
-            className="font-mono text-[10px] tracking-widest uppercase text-white/20 hover:text-white/45 transition-colors duration-500"
+            className="font-mono text-[10px] tracking-widest uppercase text-white/42 hover:text-white/72 transition-colors duration-500"
           >
             Astralis
           </Link>
@@ -36,7 +36,7 @@ export default function Layout() {
             )}
             <button
               onClick={handleSignOut}
-              className="font-mono text-[10px] tracking-widest uppercase text-white/15 hover:text-white/40 transition-colors duration-500"
+              className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500"
             >
               Exit
             </button>

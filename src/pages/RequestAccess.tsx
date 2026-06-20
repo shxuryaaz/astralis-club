@@ -129,13 +129,13 @@ export default function RequestAccess() {
               transition={{ duration: 0.7 }}
               className="text-center space-y-5"
             >
-              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/40">Received</p>
+              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/68">Received</p>
               <p className="font-sans font-light text-2xl text-white tracking-wide">We'll be in touch.</p>
-              <p className="font-sans text-sm text-white/40 leading-relaxed">
+              <p className="font-sans text-sm text-white/68 leading-relaxed">
                 If selected, you'll hear from us at {values.email}.
               </p>
               <div className="pt-6">
-                <Link to="/" className="font-mono text-[9px] tracking-widest uppercase text-white/30 hover:text-white/60 transition-colors duration-500">
+                <Link to="/" className="font-mono text-[9px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500">
                   Return
                 </Link>
               </div>
@@ -150,7 +150,7 @@ export default function RequestAccess() {
               exit="exit"
               transition={{ duration: 0.45, ease: 'easeInOut' }}
             >
-              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/30 mb-10">
+              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/55 mb-10">
                 {step.label} / {steps.length.toString().padStart(2, '0')}
               </p>
 
@@ -165,7 +165,7 @@ export default function RequestAccess() {
                   value={value}
                   onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value.slice(0, 300) }))}
                   placeholder={step.placeholder}
-                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/25 resize-none"
+                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/48 resize-none"
                 />
               ) : (
                 <input
@@ -175,20 +175,20 @@ export default function RequestAccess() {
                   onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value }))}
                   onKeyDown={handleKey}
                   placeholder={step.placeholder}
-                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/25"
+                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/48"
                 />
               )}
 
               {step.type === 'textarea' && (
-                <p className="font-mono text-[9px] text-white/20 text-right mt-1">{300 - value.length}</p>
+                <p className="font-mono text-[9px] text-white/42 text-right mt-1">{300 - value.length}</p>
               )}
 
-              {error && <p className="font-mono text-[10px] tracking-wider text-white/40 mt-4">{error}</p>}
+              {error && <p className="font-mono text-[10px] tracking-wider text-white/68 mt-4">{error}</p>}
 
               <div className="flex items-center justify-between mt-12">
                 <button
                   onClick={back}
-                  className="font-mono text-[9px] tracking-widest uppercase text-white/25 hover:text-white/55 transition-colors duration-500 py-2"
+                  className="font-mono text-[9px] tracking-widest uppercase text-white/48 hover:text-white/82 transition-colors duration-500 py-2"
                 >
                   Back
                 </button>
@@ -196,7 +196,7 @@ export default function RequestAccess() {
                 <button
                   onClick={next}
                   disabled={!value.trim() || submitting || googleBusy}
-                  className="text-white/50 hover:text-white transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed text-2xl py-2 px-2"
+                  className="text-white/78 hover:text-white transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed text-2xl py-2 px-2"
                 >
                   {submitting ? '...' : '→'}
                 </button>
@@ -204,12 +204,12 @@ export default function RequestAccess() {
 
               {isLast && (
                 <div className="mt-8 flex flex-col items-center gap-4">
-                  <span className="font-mono text-[10px] text-white/15 tracking-widest">or skip password</span>
+                  <span className="font-mono text-[10px] text-white/32 tracking-widest">or skip password</span>
                   <button
                     type="button"
                     onClick={handleGoogleSignup}
                     disabled={googleBusy || submitting}
-                    className="font-mono text-[10px] tracking-widest uppercase text-white/25 hover:text-white/55 transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="font-mono text-[10px] tracking-widest uppercase text-white/48 hover:text-white/82 transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <GoogleIcon />
                     {googleBusy ? 'Redirecting…' : 'Continue with Google'}
