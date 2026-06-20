@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import AstralisBackground from '../components/AstralisBackground'
@@ -125,6 +125,16 @@ export default function Login() {
             {googleBusy ? 'Redirecting' : 'Continue with Google'}
           </button>
         </div>
+
+        <p className="mt-12 text-center font-mono text-[10px] tracking-widest uppercase text-white/32">
+          Not a member yet?{' '}
+          <Link
+            to="/request"
+            className="text-white/55 hover:text-white/80 transition-colors duration-500"
+          >
+            Request access
+          </Link>
+        </p>
       </div>
     </div>
   )
