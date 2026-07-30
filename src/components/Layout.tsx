@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import AstralisLogo from './AstralisLogo'
 
 export default function Layout() {
   const { profile, signOut } = useAuth()
@@ -13,30 +14,31 @@ export default function Layout() {
 
   function navClass(path: string) {
     const active = location.pathname === path
-    return `font-mono text-[10px] tracking-widest uppercase transition-colors duration-500 ${
-      active ? 'text-white/70' : 'text-white/48 hover:text-white/82'
+    return `font-mono text-[8px] sm:text-[9px] tracking-[0.08em] sm:tracking-[0.14em] uppercase transition-colors ${
+      active ? 'text-[#d8d8d8]' : 'text-white/35 hover:text-white/75'
     }`
   }
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.07]">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 h-11 flex items-center justify-between">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-black/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 md:px-8">
           <Link
             to="/"
-            className="font-mono text-[10px] tracking-widest uppercase text-white/42 hover:text-white/72 transition-colors duration-500"
+            aria-label="Astralis home"
           >
-            Astralis
+            <AstralisLogo className="h-8 w-8" />
           </Link>
-          <nav className="flex items-center gap-4 sm:gap-6 md:gap-8">
-            <Link to="/dashboard" className={navClass('/dashboard')}>Feed</Link>
-            <Link to="/chat" className={navClass('/chat')}>Channel</Link>
+          <nav className="flex items-center gap-3 sm:gap-6 md:gap-8" aria-label="Member navigation">
+            <Link to="/dashboard" className={navClass('/dashboard')}>Today</Link>
+            <Link to="/chat" className={navClass('/chat')}>Commons</Link>
             {profile?.role === 'admin' && (
               <Link to="/admin" className={navClass('/admin')}>Admin</Link>
             )}
             <button
+              type="button"
               onClick={handleSignOut}
-              className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500"
+              className="font-mono text-[8px] uppercase tracking-[0.08em] text-white/25 transition-colors hover:text-white/65 sm:text-[9px] sm:tracking-[0.14em]"
             >
               Exit
             </button>
@@ -44,7 +46,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="pt-11">
+      <main className="pt-14">
         <Outlet />
       </main>
     </div>

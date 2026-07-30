@@ -3,6 +3,7 @@ import { Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import AstralisBackground from '../components/AstralisBackground'
+import AstralisLogo from '../components/AstralisLogo'
 
 function GoogleIcon() {
   return (
@@ -49,7 +50,12 @@ export default function Login() {
 
     if (error) {
       setSubmitting(false)
-      setError(error.message?.trim() || 'Sign in failed.')
+      const message = error.message?.toLowerCase() ?? ''
+      setError(
+        message.includes('invalid login credentials')
+          ? 'That password did not work. If you joined with Google, use Continue with Google below.'
+          : error.message?.trim() || 'Sign in failed.'
+      )
       return
     }
 
@@ -60,17 +66,19 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white flex items-center justify-center overflow-hidden">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-black py-16 text-white">
       <AstralisBackground />
 
       <div
         className="fixed inset-0 z-10 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(27,27,27,0.88) 100%)' }}
       />
 
       <div className="relative z-20 w-full max-w-xs px-6 md:px-8">
         <div className="mb-14">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-white/48">Astralis</p>
+          <Link to="/" aria-label="Astralis home">
+            <AstralisLogo className="h-10 w-10" />
+          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">

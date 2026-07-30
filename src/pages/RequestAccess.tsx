@@ -1,8 +1,10 @@
-import { useState, FormEvent, KeyboardEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, KeyboardEvent } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import AstralisBackground from '../components/AstralisBackground'
 import { motion, AnimatePresence } from 'motion/react'
 import { supabase } from '../lib/supabase'
+import AstralisLogo from '../components/AstralisLogo'
+import { useAuth } from '../contexts/AuthContext'
 
 function GoogleIcon() {
   return (
@@ -16,29 +18,73 @@ function GoogleIcon() {
 }
 
 const steps = [
-  { field: 'name',     label: '01', question: "What's your name?",        placeholder: 'Full name',                     type: 'text'     },
-  { field: 'email',    label: '02', question: 'Your email.',              placeholder: 'you@domain.com',                type: 'email'    },
-  { field: 'reason',   label: '03', question: 'Why do you belong here?',  placeholder: 'What you build. Why Astralis.',  type: 'textarea' },
-  { field: 'password', label: '04', question: 'Set a password.',          placeholder: '••••••••',                      type: 'password' },
-]
+  { field: 'name', label: 'Identity', question: "What's your name?", hint: 'The name people know you by.', placeholder: 'Full name', type: 'text' },
+  { field: 'email', label: 'Contact', question: 'Where can we reach you?', hint: 'One address. No mailing list.', placeholder: 'you@domain.com', type: 'email' },
+  { field: 'work', label: 'Work', question: 'Show us how you think.', hint: 'Link one thing you made and tell us why it matters.', placeholder: 'https://… — what it is, what you did, what changed.', type: 'textarea' },
+  { field: 'agency', label: 'Agency', question: 'What did nobody ask you to do?', hint: 'A thing you built, fixed, organized, or started on your own.', placeholder: 'I noticed… so I…', type: 'textarea' },
+  { field: 'focus', label: 'Obsession', question: 'What keeps pulling you back?', hint: 'A problem, field, or question you cannot leave alone.', placeholder: 'Right now I am trying to understand…', type: 'textarea' },
+  { field: 'contribution', label: 'Contribution', question: 'What can the room ask of you?', hint: 'Be specific about the judgment, skill, or perspective you bring.', placeholder: 'Come to me when you need…', type: 'textarea' },
+  { field: 'password', label: 'Access', question: 'Set a password.', hint: 'At least eight characters. Or continue with Google.', placeholder: '••••••••', type: 'password' },
+] as const
+
+type Values = Record<(typeof steps)[number]['field'], string>
 
 export default function RequestAccess() {
   const navigate = useNavigate()
+  const { user, loading } = useAuth()
   const [current, setCurrent] = useState(0)
-  const [values, setValues] = useState({ name: '', email: '', reason: '', password: '' })
+  const [values, setValues] = useState<Values>({
+    name: '',
+    email: '',
+    work: '',
+    agency: '',
+    focus: '',
+    contribution: '',
+    password: '',
+  })
   const [direction, setDirection] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
+  const [checkingEmail, setCheckingEmail] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
   const step = steps[current]
-  const value = values[step.field as keyof typeof values]
+  const value = values[step.field]
   const isLast = current === steps.length - 1
+  const isValid = value.trim().length > 0 && (step.field !== 'password' || value.length >= 8)
+  const duplicateAccountError = error === 'That email already has an account. Sign in instead.'
 
-  function next() {
-    if (!value.trim()) return
+  function applicationReason() {
+    return [
+      `WORK\n${values.work.trim()}`,
+      `AGENCY\n${values.agency.trim()}`,
+      `OBSESSION\n${values.focus.trim()}`,
+      `CONTRIBUTION\n${values.contribution.trim()}`,
+    ].join('\n\n')
+  }
+
+  async function next() {
+    if (!isValid || checkingEmail) return
     setError('')
+
+    if (step.field === 'email') {
+      setCheckingEmail(true)
+      const { data: accountExists, error: checkError } = await supabase.rpc('email_has_account', {
+        candidate_email: value.trim(),
+      })
+      setCheckingEmail(false)
+
+      if (checkError) {
+        setError('Could not check that email. Try again.')
+        return
+      }
+      if (accountExists) {
+        setError('That email already has an account. Sign in instead.')
+        return
+      }
+    }
+
     if (isLast) {
       handleSubmit()
     } else {
@@ -63,19 +109,24 @@ export default function RequestAccess() {
     sessionStorage.setItem('astralis_pending_request', JSON.stringify({
       name: values.name.trim(),
       email: values.email.trim().toLowerCase(),
-      reason: values.reason.trim(),
+      reason: applicationReason(),
     }))
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/dashboard` },
     })
+    if (error) {
+      sessionStorage.removeItem('astralis_pending_request')
+      setError(error.message)
+      setGoogleBusy(false)
+    }
   }
 
   async function handleSubmit() {
     setSubmitting(true)
 
     // Create the Supabase auth account (triggers profile creation)
-    const { error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: values.email.trim().toLowerCase(),
       password: values.password,
       options: { data: { name: values.name.trim() } },
@@ -89,11 +140,17 @@ export default function RequestAccess() {
       return
     }
 
+    if (authData.user?.identities?.length === 0) {
+      setError('That email already has an account. Sign in instead.')
+      setSubmitting(false)
+      return
+    }
+
     // Store reason for admin to review
     const { error: reqError } = await supabase.from('access_requests').insert({
       name: values.name.trim(),
       email: values.email.trim().toLowerCase(),
-      reason: values.reason.trim(),
+      reason: applicationReason(),
     })
 
     if (reqError) {
@@ -111,15 +168,45 @@ export default function RequestAccess() {
     exit:   (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30 }),
   }
 
-  return (
-    <div className="relative min-h-screen bg-black text-white flex items-center justify-center overflow-hidden px-6 md:px-8">
-      <AstralisBackground />
-      <div
-        className="fixed inset-0 z-10 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%)' }}
-      />
+  if (!loading && user) return <Navigate to="/dashboard" replace />
 
-      <div className="relative z-20 w-full max-w-sm">
+  return (
+    <div className="relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-black px-5 py-24 text-white sm:px-6 md:px-8">
+      <AstralisBackground />
+
+      <Link to="/" aria-label="Astralis home" className="absolute left-6 top-7 z-20 md:left-10">
+        <AstralisLogo className="h-10 w-10" />
+      </Link>
+
+      <AnimatePresence>
+        {duplicateAccountError && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.24, ease: 'easeOut' }}
+            role="alert"
+            className="fixed inset-x-4 top-5 z-30 ml-auto flex max-w-md items-center gap-4 border border-white bg-[#e8e8e8] px-4 py-4 text-[#1b1b1b] shadow-2xl sm:left-auto sm:right-6 sm:top-6"
+          >
+            <p className="flex-1 font-mono text-[10px] leading-5">
+              That email already has an account.
+            </p>
+            <Link to="/login" className="font-mono text-[9px] uppercase tracking-[0.14em] hover:opacity-60">
+              Sign in
+            </Link>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setError('')}
+              className="px-1 opacity-50 hover:opacity-100"
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative z-20 w-full max-w-xl">
         <AnimatePresence mode="wait" custom={direction}>
           {done ? (
             <motion.div
@@ -127,16 +214,16 @@ export default function RequestAccess() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
-              className="text-center space-y-5"
+              className="space-y-5"
             >
-              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/68">Received</p>
-              <p className="font-sans font-light text-2xl text-white tracking-wide">We'll be in touch.</p>
-              <p className="font-sans text-sm text-white/68 leading-relaxed">
-                If selected, you'll hear from us at {values.email}.
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">Application received</p>
+              <p className="font-display text-4xl tracking-[-0.035em]">Your work is now in the room.</p>
+              <p className="max-w-md font-sans text-sm leading-7 text-white/52">
+                We review applications weekly. If there is a fit, you will hear from us at {values.email}.
               </p>
               <div className="pt-6">
-                <Link to="/" className="font-mono text-[9px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500">
-                  Return
+                <Link to="/" className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white">
+                  Return home
                 </Link>
               </div>
             </motion.div>
@@ -148,24 +235,28 @@ export default function RequestAccess() {
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.45, ease: 'easeInOut' }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
             >
-              <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/55 mb-10">
-                {step.label} / {steps.length.toString().padStart(2, '0')}
-              </p>
+              <div className="mb-12 flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">{step.label}</p>
+                <p className="font-mono text-[9px] tracking-[0.12em] text-white/28">
+                  {String(current + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+                </p>
+              </div>
 
-              <h2 className="font-sans font-light text-xl md:text-2xl text-white tracking-wide mb-10">
+              <h2 className="mb-3 font-display text-2xl tracking-[-0.03em] sm:text-3xl md:text-4xl">
                 {step.question}
               </h2>
+              <p className="mb-9 max-w-md font-sans text-sm leading-6 text-white/42">{step.hint}</p>
 
               {step.type === 'textarea' ? (
                 <textarea
                   autoFocus
                   rows={3}
                   value={value}
-                  onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value.slice(0, 300) }))}
+                  onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value.slice(0, 500) }))}
                   placeholder={step.placeholder}
-                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/48 resize-none"
+                  className="w-full resize-none border-b border-white/15 bg-transparent py-3 font-sans text-sm leading-6 text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                 />
               ) : (
                 <input
@@ -175,41 +266,51 @@ export default function RequestAccess() {
                   onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value }))}
                   onKeyDown={handleKey}
                   placeholder={step.placeholder}
-                  className="w-full bg-transparent border-b border-white/25 text-white font-mono text-sm py-3 outline-none focus:border-white/60 transition-colors duration-500 placeholder-white/48"
+                  autoComplete={step.field === 'email' ? 'email' : step.field === 'password' ? 'new-password' : 'name'}
+                  className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                 />
               )}
 
               {step.type === 'textarea' && (
-                <p className="font-mono text-[9px] text-white/42 text-right mt-1">{300 - value.length}</p>
+                <p className="mt-2 text-right font-mono text-[9px] text-white/25">{500 - value.length}</p>
               )}
 
-              {error && <p className="font-mono text-[10px] tracking-wider text-white/68 mt-4">{error}</p>}
+              {step.field === 'email' && (
+                <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.12em] text-white/35">
+                  Already registered?{' '}
+                  <Link to="/login" className="text-white/65 hover:text-white">Sign in</Link>
+                </p>
+              )}
 
-              <div className="flex items-center justify-between mt-12">
+              {error && !duplicateAccountError && <p className="mt-4 font-mono text-[10px] leading-5 text-white/55">{error}</p>}
+
+              <div className="mt-12 flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={back}
-                  className="font-mono text-[9px] tracking-widest uppercase text-white/48 hover:text-white/82 transition-colors duration-500 py-2"
+                  className="py-2 font-mono text-[9px] uppercase tracking-[0.16em] text-white/38 transition-colors hover:text-white"
                 >
                   Back
                 </button>
 
                 <button
+                  type="button"
                   onClick={next}
-                  disabled={!value.trim() || submitting || googleBusy}
-                  className="text-white/78 hover:text-white transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed text-2xl py-2 px-2"
+                  disabled={!isValid || submitting || googleBusy || checkingEmail}
+                  className="border border-white/15 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.16em] text-white/62 transition-colors hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                 >
-                  {submitting ? '...' : '→'}
+                  {checkingEmail ? 'Checking' : submitting ? 'Sending' : isLast ? 'Submit application' : 'Continue'}
                 </button>
               </div>
 
               {isLast && (
-                <div className="mt-8 flex flex-col items-center gap-4">
-                  <span className="font-mono text-[10px] text-white/32 tracking-widest">or skip password</span>
+                <div className="mt-8 flex items-center justify-end gap-4 border-t border-white/[0.07] pt-6">
+                  <span className="font-mono text-[9px] text-white/25">or</span>
                   <button
                     type="button"
                     onClick={handleGoogleSignup}
                     disabled={googleBusy || submitting}
-                    className="font-mono text-[10px] tracking-widest uppercase text-white/48 hover:text-white/82 transition-colors duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                   >
                     <GoogleIcon />
                     {googleBusy ? 'Redirecting…' : 'Continue with Google'}

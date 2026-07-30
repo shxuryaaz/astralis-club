@@ -190,13 +190,13 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="max-w-3xl mx-auto px-8 py-16">
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
         <div className="mb-12">
           <h1 className="font-mono text-[10px] tracking-widest uppercase text-white/55">Admin</h1>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-8 mb-12 border-b border-white/[0.07] pb-4">
+        <div className="mb-10 flex gap-5 overflow-x-auto border-b border-white/[0.07] pb-4 sm:mb-12 sm:gap-8">
           {(['requests', 'users', 'hackathons'] as const).map((tab) => (
             <button
               key={tab}
@@ -231,7 +231,7 @@ export default function Admin() {
                     placeholder="Event title"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
                   <div>
                     <label className={labelClass}>Date</label>
                     <input
@@ -289,7 +289,7 @@ export default function Admin() {
                   )}
                 </div>
                 {hackathonError && (
-                  <p className="font-mono text-[10px] text-amber-200/80 mt-4 leading-relaxed">{hackathonError}</p>
+                  <p className="mt-4 font-mono text-[10px] leading-relaxed text-white/55">{hackathonError}</p>
                 )}
               </form>
             </div>
@@ -300,14 +300,14 @@ export default function Admin() {
                 <p className={labelClass}>Events</p>
                 <div className="mt-6 divide-y divide-white/[0.07]">
                   {hackathons.map((h) => (
-                    <div key={h.id} className="py-6 flex items-start justify-between gap-8">
+                    <div key={h.id} className="flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
                       <div className="min-w-0">
                         <p className="font-sans text-sm text-white/75 mb-1">{h.title}</p>
                         <p className="font-mono text-[10px] tracking-wider text-white/48 uppercase">
                           {h.date} · {h.mode}
                         </p>
                       </div>
-                      <div className="flex gap-5 pt-1 flex-shrink-0">
+                      <div className="flex flex-shrink-0 justify-end gap-5 pt-1">
                         <button
                           onClick={() => handleEdit(h)}
                           className="font-mono text-[10px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500"
@@ -357,7 +357,7 @@ export default function Admin() {
                   const busy = busyRequestId === req.id || bulkBusy
                   return (
                     <div key={req.id} className="py-6">
-                      <div className="flex items-start justify-between gap-8">
+                      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
                           <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">{req.email}</p>
@@ -371,12 +371,12 @@ export default function Admin() {
                             {formatTimestamp(req.created_at)}
                           </p>
                           {rowError?.id === req.id && (
-                            <p className="font-mono text-[10px] text-amber-200/80 mt-3 max-w-md leading-relaxed">
+                            <p className="mt-3 max-w-md font-mono text-[10px] leading-relaxed text-white/55">
                               {rowError.message}
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-5 pt-1 flex-shrink-0">
+                        <div className="flex flex-shrink-0 justify-end gap-5 pt-1">
                           {link === 'pending' && (
                             <button
                               type="button"
@@ -409,7 +409,7 @@ export default function Admin() {
             <p className={labelClass}>Members</p>
             <div className="mt-6 divide-y divide-white/[0.07]">
               {users.map((u) => (
-                <div key={u.id} className="py-6 flex items-start justify-between gap-8">
+                <div key={u.id} className="flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
                   <div className="min-w-0">
                     <p className="font-sans text-sm text-white/75 mb-1">{u.name}</p>
                     <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">
@@ -429,10 +429,10 @@ export default function Admin() {
                       </span>
                     </div>
                     {rowError?.id === u.id && (
-                      <p className="font-mono text-[10px] text-amber-200/80 mt-2 max-w-sm leading-relaxed">{rowError.message}</p>
+                      <p className="mt-2 max-w-sm font-mono text-[10px] leading-relaxed text-white/55">{rowError.message}</p>
                     )}
                   </div>
-                  <div className="flex gap-5 pt-1 flex-shrink-0">
+                  <div className="flex flex-shrink-0 justify-end gap-5 pt-1">
                     <button
                       onClick={() => toggleApproval(u)}
                       className="font-mono text-[10px] tracking-widest uppercase text-white/55 hover:text-white/60 transition-colors duration-500"

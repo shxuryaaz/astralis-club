@@ -26,10 +26,10 @@ export default function Chat() {
     supabase
       .from('messages')
       .select('*')
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(200)
       .then(({ data, error }) => {
-        if (!error && data) setMessages(data as Message[])
+        if (!error && data) setMessages((data as Message[]).reverse())
         setLoading(false)
       })
 
@@ -77,10 +77,11 @@ export default function Chat() {
   const charsLeft = MAX_LENGTH - input.length
 
   return (
-    <div className="flex flex-col bg-black" style={{ height: 'calc(100vh - 44px)' }}>
+    <div className="flex flex-col bg-black" style={{ height: 'calc(100vh - 56px)' }}>
       {/* Header */}
-      <div className="border-b border-white/[0.07] px-4 md:px-8 py-4 md:py-5 flex-shrink-0">
-        <span className="font-mono text-[10px] tracking-widest uppercase text-white/55">Channel</span>
+      <div className="flex flex-shrink-0 items-center gap-3 border-b border-white/[0.08] px-4 py-4 md:px-8 md:py-5">
+        <span className="font-display text-lg text-white/78">Commons</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/25">Shared room</span>
       </div>
 
       {/* Messages */}
@@ -110,11 +111,11 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-white/[0.07] px-4 md:px-8 py-4 md:py-5 flex-shrink-0">
+      <div className="flex-shrink-0 border-t border-white/[0.08] px-4 py-4 md:px-8 md:py-5">
         {sendError && (
-          <p className="font-mono text-[10px] text-amber-200/70 mb-3 max-w-2xl">{sendError}</p>
+          <p className="mb-3 max-w-2xl font-mono text-[10px] text-white/55">{sendError}</p>
         )}
-        <form onSubmit={handleSend} className="max-w-2xl flex items-center gap-4 md:gap-6">
+        <form onSubmit={handleSend} className="flex max-w-2xl items-center gap-2 sm:gap-4 md:gap-6">
           <div className="flex-1 relative">
             <input
               ref={inputRef}
@@ -122,8 +123,8 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value.slice(0, MAX_LENGTH))}
               onKeyDown={handleKeyDown}
-              placeholder="Message"
-              className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/40 transition-colors duration-500 placeholder-white/35 pr-8"
+              placeholder="Share context, ask clearly"
+              className="w-full border-b border-white/15 bg-transparent py-3 pr-8 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
             />
             {charsLeft <= 50 && (
               <span className="absolute right-0 bottom-3 font-mono text-[10px] text-white/42">{charsLeft}</span>
@@ -132,7 +133,7 @@ export default function Chat() {
           <button
             type="submit"
             disabled={!canSend}
-            className="font-mono text-[10px] tracking-widest uppercase text-white/55 border border-white/[0.12] px-4 md:px-5 py-2.5 hover:border-white/30 hover:text-white/60 transition-all duration-500 disabled:opacity-20 disabled:cursor-not-allowed flex-shrink-0"
+            className="flex-shrink-0 border border-white/[0.12] px-3 py-2.5 font-mono text-[8px] uppercase tracking-[0.1em] text-white/55 transition-colors hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-20 sm:px-4 sm:text-[9px] sm:tracking-[0.14em] md:px-5"
           >
             Send
           </button>

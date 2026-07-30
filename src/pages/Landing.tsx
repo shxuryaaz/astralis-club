@@ -1,160 +1,144 @@
 import { Link } from 'react-router-dom'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import AstralisBackground from '../components/AstralisBackground'
-import { motion } from 'motion/react'
+import AstralisLogo from '../components/AstralisLogo'
+
+const pillars = [
+  {
+    index: '01',
+    title: 'Hackathons',
+    body: 'We form teams before the brief drops and enter expecting to place. When a team clicks, it keeps building after the event ends.',
+  },
+  {
+    index: '02',
+    title: 'Placements',
+    body: 'The right opening helps. So does a hard mock interview, or an introduction from someone who has actually seen your work.',
+  },
+  {
+    index: '03',
+    title: 'Whatever comes next',
+    body: 'New competitions, new companies, new roles. If something is worth chasing, someone here is already on it.',
+  },
+]
+
+const wins = [
+  {
+    event: 'Hacked 4.0',
+    result: 'Top 7 of 100+ teams',
+    detail: 'Built a multi-agent trading arena in 24 hours.',
+    href: 'https://www.linkedin.com/posts/shauryasingh28_built-a-multi-agent-trading-arena-for-a-hackathon-activity-7441831619688280064-vqvf',
+  },
+  {
+    event: 'Techpreneur 2026',
+    result: '7th of 75+ qualified teams',
+    detail: 'Built Runway, an execution engine for early-stage startups.',
+    href: 'https://www.linkedin.com/posts/shauryasingh28_close-enough-to-feel-proud-far-enough-to-activity-7428327204259893248-v8d2',
+  },
+  {
+    event: 'EY Techathon 6.0',
+    result: 'Advanced to round two',
+    detail: 'A solo submission selected from more than 1.8 lakh participants.',
+    href: 'https://www.linkedin.com/posts/shauryasingh28_just-qualified-for-techathons-2nd-round-activity-7408520644721725440-RP_w',
+  },
+]
 
 export default function Landing() {
+  const reducedMotion = useReducedMotion()
+  const { scrollYProgress } = useScroll()
+  const letterSpacing = useTransform(scrollYProgress, [0, 0.2], ['0.2em', '0.13em'])
+
   return (
-    <main className="relative w-full bg-black text-white selection:bg-white selection:text-black">
+    <main className="relative w-full overflow-x-hidden bg-black text-white selection:bg-white selection:text-black">
       <AstralisBackground />
+      <div className="pointer-events-none fixed inset-0 z-10 bg-black/45" />
 
-      {/* Vignette */}
-      <div className="pointer-events-none fixed inset-0 z-10 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
+      <nav className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-black/40 px-4 backdrop-blur-sm sm:px-8">
+        <Link to="/" aria-label="Astralis home">
+          <AstralisLogo className="h-9 w-9" />
+        </Link>
+        <div className="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65 sm:gap-7 sm:text-[11px]">
+          <Link to="/members" className="transition-colors hover:text-white">Members</Link>
+          <Link to="/login" className="hidden transition-colors hover:text-white sm:inline">Sign In</Link>
+          <Link to="/request" className="transition-colors hover:text-white">Request Access</Link>
+        </div>
+      </nav>
 
-      {/* ── Hero ── */}
-      <div className="relative z-20 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 2, ease: 'easeOut' }}
-          className="max-w-2xl flex flex-col items-center"
-        >
-          <h1 className="mb-4 font-sans text-7xl font-light tracking-[0.2em] uppercase sm:text-9xl">
+      <section className="relative z-20 flex min-h-dvh flex-col items-center justify-center px-4 text-center">
+        <div className="flex max-w-full flex-col items-center">
+          <motion.h1
+            style={{ letterSpacing: reducedMotion ? '0.2em' : letterSpacing }}
+            className="mb-4 pl-[0.2em] font-sans text-[clamp(3.15rem,14vw,10rem)] font-light uppercase leading-none"
+          >
             Astralis
-          </h1>
-
-          <p className="font-mono text-xs tracking-[0.3em] text-white/68 uppercase sm:text-sm mb-14">
+          </motion.h1>
+          <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/60 sm:text-xs sm:tracking-[0.35em]">
             Not a club. A cartel.
           </p>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 1.5 }}
-            className="flex flex-col items-center gap-5"
+          <Link
+            to="/request"
+            className="mt-10 border border-white/30 px-8 py-4 font-mono text-[9px] uppercase tracking-[0.25em] text-white/70 transition-colors hover:bg-white hover:text-black sm:px-12 sm:text-[10px]"
           >
-            <Link
-              to="/request"
-              className="border border-white/50 text-white/80 font-mono text-[10px] tracking-[0.3em] uppercase px-14 py-3 hover:bg-white hover:text-black transition-all duration-500 w-64 text-center"
-            >
-              Request Access
-            </Link>
-
-            <Link
-              to="/login"
-              className="font-mono text-[10px] tracking-[0.35em] uppercase text-white/48 hover:text-white/60 transition-colors duration-500"
-            >
-              Sign In
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2.5, duration: 1.5 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        >
-          <div className="h-8 w-px bg-white/15" />
-        </motion.div>
-      </div>
-
-      {/* ── About Section ── */}
-      <section className="relative z-20 py-24 md:py-40">
-
-        {/* Label */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1 }}
-          className="max-w-5xl mx-auto px-4 md:px-8 mb-16 md:mb-20"
-        >
-          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-white/48">
-            02 // What We Are
-          </p>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-          className="max-w-5xl mx-auto px-4 md:px-8 mb-16 md:mb-24"
-        >
-          <h2 className="font-sans font-light text-4xl sm:text-5xl md:text-[3.75rem] leading-[1.15] tracking-wide">
-            <span className="text-white/90">NIET's premier</span>
-            <br />
-            <span className="text-white/68">quant &amp; fintech</span>
-            <br />
-            <span className="text-white/90">collective.</span>
-          </h2>
-        </motion.div>
-
-        {/* Descriptor */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="max-w-5xl mx-auto px-4 md:px-8 mb-20 md:mb-28"
-        >
-          <p className="font-sans text-sm text-white/55 leading-loose max-w-md">
-            We model markets, build systems, and dominate hackathons.
-            Closed by design. Selected by merit.
-          </p>
-        </motion.div>
-
-        {/* Pillars — horizontal rows */}
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
-          {[
-            {
-              index: '01',
-              title: 'Quant & Finance',
-              body: 'Algorithmic thinking, financial modelling, market systems, and the mathematics that moves capital.',
-            },
-            {
-              index: '02',
-              title: 'Fintech & Engineering',
-              body: 'Payments infrastructure, lending systems, capital markets tech — where finance meets code.',
-            },
-            {
-              index: '03',
-              title: 'Hackathon Dominance',
-              body: "We don't participate. We arrive prepared, execute as a unit, and leave with the win.",
-            },
-          ].map((p, i) => (
-            <motion.div
-              key={p.index}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: i * 0.12, ease: 'easeOut' }}
-              className="flex items-start gap-6 md:gap-12 py-7 md:py-9 border-t border-white/[0.07]"
-            >
-              <span className="font-mono text-[10px] tracking-widest text-white/42 mt-[3px] w-5 flex-shrink-0">
-                {p.index}
-              </span>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:gap-12 flex-1 min-w-0">
-                <p className="font-sans text-sm text-white/65 tracking-wide mb-2 sm:mb-0 sm:w-44 flex-shrink-0">
-                  {p.title}
-                </p>
-                <p className="font-sans text-sm text-white/52 leading-relaxed flex-1">
-                  {p.body}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-          <div className="border-t border-white/[0.07]" />
+            Request Access
+          </Link>
         </div>
-
       </section>
 
-      {/* ── Footer ── */}
-      <div className="relative z-20 border-t border-white/[0.07] px-8 py-8 flex justify-between items-center font-mono text-[9px] tracking-widest text-white/32 uppercase">
-        <span>01 // System Active</span>
-        <span>2026 // Astralis</span>
+      <div className="relative z-20 border-t border-white/10 bg-black/90">
+        <section className="mx-auto max-w-6xl px-4 sm:px-8">
+          <div className="py-16">
+            <p className="mb-10 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
+            02 // What We Are
+            </p>
+            <div className="grid gap-8 md:grid-cols-2 md:gap-16">
+              <h2 className="font-sans text-[clamp(2.15rem,5vw,4.5rem)] font-light leading-[1.03] tracking-[-0.03em] text-white/90">
+                You don't join Astralis.<br />You qualify.
+              </h2>
+              <p className="max-w-xl self-end font-sans text-[15px] leading-7 text-white/72 sm:text-base">
+                Astralis only takes people who have already won something. A hackathon podium, a case competition, a national round. Once you're in, the work is simple: we enter together, prepare properly, and get each other hired.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-white/10">
+            {pillars.map((pillar) => (
+              <div
+                key={pillar.index}
+                className="grid grid-cols-[2rem_6.75rem_1fr] gap-2 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4rem_12rem_1fr] sm:gap-4 sm:px-3"
+              >
+                <span className="font-mono text-[9px] text-white/50 sm:text-[11px]">{pillar.index} /</span>
+                <h3 className="font-sans text-xs text-white/85 sm:text-base">{pillar.title}</h3>
+                <p className="font-sans text-[11px] leading-5 text-white/65 sm:text-[15px] sm:leading-6">{pillar.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-b border-white/10">
+          <div className="mx-auto max-w-6xl px-4 sm:px-8">
+            <p className="py-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
+              03 // Wins
+            </p>
+          </div>
+          <div className="mx-auto max-w-6xl border-t border-white/10 px-4 sm:px-8">
+            {wins.map((win) => (
+              <a
+                key={win.event}
+                href={win.href}
+                target="_blank"
+                rel="noreferrer"
+                className="grid grid-cols-[minmax(7rem,1fr)_minmax(8rem,1.2fr)] gap-3 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[12rem_15rem_1fr] sm:px-3"
+              >
+                <p className="font-sans text-xs text-white/85 sm:text-base">{win.event}</p>
+                <p className="font-mono text-[9px] uppercase leading-5 tracking-wider text-white/65 sm:text-[11px]">{win.result}</p>
+                <p className="hidden font-sans text-[15px] leading-6 text-white/60 sm:block">{win.detail}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <footer className="border-t border-white/10 px-4 py-7 text-center font-mono text-[9px] uppercase tracking-widest text-white/45 sm:text-[10px]">
+          Astralis © 2026
+        </footer>
       </div>
     </main>
   )

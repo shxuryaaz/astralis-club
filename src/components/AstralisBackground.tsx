@@ -14,68 +14,77 @@ export default function AstralisBackground() {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
 
     const waves: Wave[] = [
-      { freq: 0.008, amp: 100, phase: 0,   speed: 0.004, opacity: 0.18, yOffset: 0    },
-      { freq: 0.014, amp: 65,  phase: 2.1, speed: 0.006, opacity: 0.13, yOffset: 0.15 },
+      { freq: 0.008, amp: 100, phase: 0, speed: 0.004, opacity: 0.18, yOffset: 0 },
+      { freq: 0.014, amp: 65, phase: 2.1, speed: 0.006, opacity: 0.13, yOffset: 0.15 },
       { freq: 0.005, amp: 140, phase: 4.3, speed: 0.002, opacity: 0.10, yOffset: -0.1 },
-      { freq: 0.02,  amp: 50,  phase: 1.0, speed: 0.009, opacity: 0.15, yOffset: 0.25 },
-      { freq: 0.011, amp: 85,  phase: 3.5, speed: 0.003, opacity: 0.09, yOffset: -0.2 },
-      { freq: 0.017, amp: 60,  phase: 0.7, speed: 0.007, opacity: 0.12, yOffset: 0.05 },
+      { freq: 0.02, amp: 50, phase: 1, speed: 0.009, opacity: 0.15, yOffset: 0.25 },
+      { freq: 0.011, amp: 85, phase: 3.5, speed: 0.003, opacity: 0.09, yOffset: -0.2 },
+      { freq: 0.017, amp: 60, phase: 0.7, speed: 0.007, opacity: 0.12, yOffset: 0.05 },
     ]
 
-    let animId: number
-    let startTime: number | null = null
-    const FADE_DURATION = 3000 // ms
+    let animId = 0
+    let width = 0
+    let height = 0
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     function resize() {
-      canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      width = window.innerWidth
+      height = window.innerHeight
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
-    function draw(timestamp: number) {
-      if (!startTime) startTime = timestamp
-      const elapsed = timestamp - startTime
-      const fadeIn  = Math.min(elapsed / FADE_DURATION, 1)
+    function draw() {
+      ctx.clearRect(0, 0, width, height)
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      waves.forEach((w) => {
+      waves.forEach((wave) => {
         ctx.beginPath()
         ctx.lineWidth = 1.5
-        ctx.strokeStyle = `rgba(255,255,255,${w.opacity * fadeIn})`
+        ctx.strokeStyle = `rgba(128,128,128,${wave.opacity})`
+        const baseY = height * (0.5 + wave.yOffset)
 
-        const baseY = canvas.height * (0.5 + w.yOffset)
-
-        for (let x = 0; x <= canvas.width; x += 2) {
-          const y = baseY + Math.sin(x * w.freq + w.phase) * w.amp
+        for (let x = 0; x <= width; x += 2) {
+          const y = baseY + Math.sin(x * wave.freq + wave.phase) * wave.amp
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
         }
 
         ctx.stroke()
-        w.phase += w.speed
+        if (!reducedMotion) wave.phase += wave.speed
       })
 
-      animId = requestAnimationFrame(draw)
+      if (!reducedMotion) animId = requestAnimationFrame(draw)
+    }
+
+    function handleVisibility() {
+      cancelAnimationFrame(animId)
+      if (!document.hidden && !reducedMotion) animId = requestAnimationFrame(draw)
     }
 
     resize()
+    draw()
     window.addEventListener('resize', resize)
-    animId = requestAnimationFrame(draw)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', resize)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 z-0 bg-black w-full h-full"
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-0 h-full w-full bg-black"
     />
   )
 }

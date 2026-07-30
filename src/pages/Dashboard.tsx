@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import type { Hackathon } from '../types'
 
@@ -10,9 +12,10 @@ function formatDate(dateStr: string) {
 }
 
 export default function Dashboard() {
+  const { profile } = useAuth()
   const [hackathons, setHackathons] = useState<Hackathon[]>([])
   const [loading, setLoading] = useState(true)
-  const [interested, setInterested] = useState<Set<string>>(new Set())
+  const [error, setError] = useState('')
 
   useEffect(() => {
     supabase
@@ -20,71 +23,84 @@ export default function Dashboard() {
       .select('*')
       .order('date', { ascending: true })
       .then(({ data, error }) => {
-        if (!error && data) setHackathons(data as Hackathon[])
+        if (error) setError('Events could not be loaded. Refresh to try again.')
+        else if (data) setHackathons(data as Hackathon[])
         setLoading(false)
       })
   }, [])
 
-  function toggleInterested(id: string) {
-    setInterested((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
   return (
     <div className="min-h-screen bg-black">
-      <div className="max-w-3xl mx-auto px-4 md:px-8 py-12 md:py-16">
-        <div className="mb-12 md:mb-16">
-          <h1 className="font-mono text-[10px] tracking-widest uppercase text-white/55">Feed</h1>
-        </div>
+      <div className="mx-auto max-w-5xl px-4 py-12 md:px-8 md:py-16">
+        <div className="grid gap-12 md:grid-cols-[1fr_260px]">
+          <main>
+            <div className="mb-14">
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/55">Today</p>
+              <h1 className="mt-4 font-display text-4xl tracking-[-0.035em] text-[#d8d8d8]">
+                Good to see you{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}.
+              </h1>
+              <p className="mt-3 max-w-lg font-sans text-sm leading-6 text-white/42">
+                The useful things happening across Astralis, without the noise.
+              </p>
+            </div>
 
-        {loading ? (
-          <p className="font-mono text-[10px] tracking-widest uppercase text-white/42">Loading</p>
-        ) : hackathons.length === 0 ? (
-          <p className="font-mono text-[10px] tracking-widest uppercase text-white/42">No events</p>
-        ) : (
-          <div className="divide-y divide-white/[0.07]">
-            {hackathons.map((h) => (
-              <div key={h.id} className="py-8 md:py-10">
-                <div className="flex items-start justify-between gap-4 md:gap-8">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3">
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-white/55">
-                        {formatDate(h.date)}
-                      </span>
-                      <span className="font-mono text-[10px] text-white/32">·</span>
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-white/48">
-                        {h.mode}
-                      </span>
-                    </div>
-                    <h2 className="font-sans font-light text-base md:text-lg text-white/90 tracking-wide mb-3">
-                      {h.title}
-                    </h2>
-                    <p className="font-sans text-sm text-white/62 leading-relaxed">
-                      {h.description}
-                    </p>
-                  </div>
-
-                  <div className="flex-shrink-0 flex flex-col items-end gap-3 pt-6">
-                    <button className="font-mono text-[10px] tracking-widest uppercase text-white/68 border border-white/[0.12] px-4 md:px-5 py-2.5 hover:border-white/30 hover:text-white/70 transition-all duration-500">
-                      Enter
-                    </button>
-                    <button
-                      onClick={() => toggleInterested(h.id)}
-                      className={`font-mono text-[10px] tracking-widest uppercase transition-colors duration-500 ${
-                        interested.has(h.id) ? 'text-white/82' : 'text-white/42 hover:text-white/68'
-                      }`}
-                    >
-                      {interested.has(h.id) ? 'Interested' : 'Mark'}
-                    </button>
-                  </div>
-                </div>
+            <section>
+              <div className="mb-5 flex items-center justify-between border-b border-white/[0.08] pb-4">
+                <h2 className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/42">Upcoming sessions</h2>
+                <span className="font-mono text-[9px] text-white/25">{hackathons.length}</span>
               </div>
-            ))}
-          </div>
-        )}
+
+              {loading ? (
+                <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/32">Loading</p>
+              ) : error ? (
+                <p className="font-sans text-sm text-white/55">{error}</p>
+              ) : hackathons.length === 0 ? (
+                <div className="border border-dashed border-white/10 px-6 py-12">
+                  <p className="font-display text-xl text-white/70">No sessions scheduled.</p>
+                  <p className="mt-2 font-sans text-sm text-white/35">The room is still open. Start a conversation or ask for help.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.08]">
+                  {hackathons.map((h) => (
+                    <article key={h.id} className="grid gap-5 py-7 sm:grid-cols-[130px_1fr]">
+                      <div>
+                        <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/55">{formatDate(h.date)}</p>
+                        <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/28">{h.mode}</p>
+                      </div>
+                      <div>
+                        <h3 className="font-display text-xl text-white/82">{h.title}</h3>
+                        <p className="mt-2 max-w-xl font-sans text-sm leading-6 text-white/42">{h.description}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </main>
+
+          <aside className="space-y-8">
+            <div className="border border-white/[0.09] p-5">
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/30">Commons room</p>
+              <p className="mt-5 font-display text-xl text-white/78">Ask early. Share unfinished work.</p>
+              <p className="mt-3 font-sans text-xs leading-5 text-white/38">
+                One shared room while the network is small. More rooms should exist only when the work demands them.
+              </p>
+              <Link
+                to="/chat"
+                className="mt-6 inline-block border-b border-white/40 pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-white/62"
+              >
+                Open commons
+              </Link>
+            </div>
+
+            <div className="border-t border-white/[0.08] pt-5">
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/30">Working agreement</p>
+              <p className="mt-4 font-sans text-xs leading-5 text-white/38">
+                Be specific. Protect confidence. Give more useful context than you consume.
+              </p>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   )

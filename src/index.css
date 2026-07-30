@@ -2,6 +2,31 @@
 @import "tailwindcss";
 
 @theme {
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-black: #1b1b1b;
+  --color-white: #b8b8b8;
+}
+
+html {
+  background: #1b1b1b;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #1b1b1b;
+  color: #b8b8b8;
+}
+
+button,
+a {
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

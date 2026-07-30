@@ -67,12 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (pendingRaw) {
           try {
             const pending = JSON.parse(pendingRaw)
-            sessionStorage.removeItem('astralis_pending_request')
-            await supabase.from('access_requests').insert({
+            const { error } = await supabase.from('access_requests').insert({
               name: pending.name || p?.name || '',
               email: pending.email || s.user.email || '',
               reason: pending.reason || '',
             })
+            if (!error) sessionStorage.removeItem('astralis_pending_request')
           } catch {
             // non-critical — admin can still see the user in Members tab
           }
@@ -111,12 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    try {
-      await supabase.auth.signOut()
-    } catch (e) {
-      console.error('signOut error:', e)
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error('signOut error:', error)
+      return
     }
-    // Always clear state, even if the Supabase call failed
     setUser(null)
     setProfile(null)
     setSession(null)
