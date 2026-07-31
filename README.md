@@ -8,6 +8,8 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/6c39a2f5-71c9-47ed-9259-8635cc66894c
 
+Production: https://astralis-club.vercel.app
+
 ## Run Locally
 
 **Prerequisites:**  Node.js
