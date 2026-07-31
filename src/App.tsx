@@ -9,10 +9,12 @@ import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
 import Members from './pages/Members'
+import SiteLoader from './components/SiteLoader'
 
 export default function App() {
   return (
     <AuthProvider>
+      <SiteLoader />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />

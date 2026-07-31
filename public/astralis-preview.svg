@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1b1b1b"/>
+  <g fill="none" stroke="#3a3a3a" stroke-width="2" opacity=".55">
+    <path d="M-40 185 C180 20 340 350 590 170 S980 35 1240 210"/>
+    <path d="M-60 390 C170 215 340 545 610 355 S970 235 1260 410"/>
+    <path d="M-30 505 C190 350 410 655 670 470 S1020 340 1240 500"/>
+  </g>
+  <text x="600" y="292" fill="#c8c8c8" font-family="Inter, Arial, sans-serif" font-size="126" font-weight="300" letter-spacing="34" text-anchor="middle">ASTRALIS</text>
+  <text x="600" y="378" fill="#888888" font-family="Menlo, monospace" font-size="24" letter-spacing="9" text-anchor="middle">NOT A CLUB. A CARTEL.</text>
+  <line x1="72" y1="72" x2="1128" y2="72" stroke="#3a3a3a"/>
+  <line x1="72" y1="558" x2="1128" y2="558" stroke="#3a3a3a"/>
+  <text x="72" y="598" fill="#666666" font-family="Menlo, monospace" font-size="16" letter-spacing="4">2026 // ASTRALIS</text>
+</svg>

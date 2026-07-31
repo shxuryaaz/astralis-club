@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import AstralisBackground from '../components/AstralisBackground'
 import AstralisLogo from '../components/AstralisLogo'
+import { useAuth } from '../contexts/AuthContext'
 
 const pillars = [
   {
@@ -21,31 +23,44 @@ const pillars = [
   },
 ]
 
-const wins = [
+const featuredWins = [
   {
-    event: 'Hacked 4.0',
-    result: 'Top 7 of 100+ teams',
-    detail: 'Built a multi-agent trading arena in 24 hours.',
-    href: 'https://www.linkedin.com/posts/shauryasingh28_built-a-multi-agent-trading-arena-for-a-hackathon-activity-7441831619688280064-vqvf',
+    image: '/hackbmu-8-team-noir.png',
+    alt: 'Team Noir receiving third place certificates at HackBMU 8.0',
+    label: '18–19 April 2026 // HackBMU 8.0',
+    headline: 'Team Noir takes third among 100+ teams.',
   },
   {
-    event: 'Techpreneur 2026',
-    result: '7th of 75+ qualified teams',
-    detail: 'Built Runway, an execution engine for early-stage startups.',
-    href: 'https://www.linkedin.com/posts/shauryasingh28_close-enough-to-feel-proud-far-enough-to-activity-7428327204259893248-v8d2',
-  },
-  {
-    event: 'EY Techathon 6.0',
-    result: 'Advanced to round two',
-    detail: 'A solo submission selected from more than 1.8 lakh participants.',
-    href: 'https://www.linkedin.com/posts/shauryasingh28_just-qualified-for-techathons-2nd-round-activity-7408520644721725440-RP_w',
+    image: '/orbix-team-monarch.png',
+    alt: 'Team Monarch holding the ORBIX winners trophy at IIIT Delhi',
+    label: '25–26 March 2026 // ORBIX',
+    headline: 'Team Monarch wins ORBIX at IIIT Delhi.',
   },
 ]
 
 export default function Landing() {
+  const [activeWin, setActiveWin] = useState(0)
+  const { user, profile } = useAuth()
   const reducedMotion = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const letterSpacing = useTransform(scrollYProgress, [0, 0.2], ['0.2em', '0.13em'])
+  const featuredWin = featuredWins[activeWin]
+  const memberName = profile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Member'
+  const memberInitials = memberName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part: string) => part[0])
+    .join('')
+    .toUpperCase()
+
+  useEffect(() => {
+    if (reducedMotion) return
+    const timer = window.setInterval(
+      () => setActiveWin((current) => (current + 1) % featuredWins.length),
+      6000,
+    )
+    return () => window.clearInterval(timer)
+  }, [reducedMotion])
 
   return (
     <main className="relative w-full overflow-x-hidden bg-black text-white selection:bg-white selection:text-black">
@@ -57,9 +72,18 @@ export default function Landing() {
           <AstralisLogo className="h-9 w-9" />
         </Link>
         <div className="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65 sm:gap-7 sm:text-[11px]">
-          <Link to="/members" className="transition-colors hover:text-white">Members</Link>
-          <Link to="/login" className="hidden transition-colors hover:text-white sm:inline">Sign In</Link>
-          <Link to="/request" className="transition-colors hover:text-white">Request Access</Link>
+          <Link to="/members" viewTransition className="transition-colors hover:text-white">Members</Link>
+          {user ? (
+            <Link to="/dashboard" className="transition-colors hover:text-white">
+              <span className="sm:hidden">{memberInitials}</span>
+              <span className="hidden sm:inline">{memberName.split(' ')[0]}</span>
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="hidden transition-colors hover:text-white sm:inline">Sign In</Link>
+              <Link to="/request" className="transition-colors hover:text-white">Request Access</Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -67,18 +91,25 @@ export default function Landing() {
         <div className="flex max-w-full flex-col items-center">
           <motion.h1
             style={{ letterSpacing: reducedMotion ? '0.2em' : letterSpacing }}
-            className="mb-4 pl-[0.2em] font-sans text-[clamp(3.15rem,14vw,10rem)] font-light uppercase leading-none"
+            aria-label="Astralis"
+            className="mb-4 flex items-center justify-center gap-[0.12em] pl-[0.1em] font-sans text-[clamp(3.15rem,14vw,10rem)] font-light uppercase leading-none"
           >
-            Astralis
+            <img
+              src="/astralis-logo.png"
+              alt=""
+              aria-hidden="true"
+              className="h-[1.2em] w-[1.2em] shrink-0 object-contain"
+            />
+            <span>Stralis</span>
           </motion.h1>
           <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/60 sm:text-xs sm:tracking-[0.35em]">
             Not a club. A cartel.
           </p>
           <Link
-            to="/request"
+            to={user ? '/dashboard' : '/request'}
             className="mt-10 border border-white/30 px-8 py-4 font-mono text-[9px] uppercase tracking-[0.25em] text-white/70 transition-colors hover:bg-white hover:text-black sm:px-12 sm:text-[10px]"
           >
-            Request Access
+            {user ? 'Enter Astralis' : 'Request Access'}
           </Link>
         </div>
       </section>
@@ -118,21 +149,52 @@ export default function Landing() {
             <p className="py-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
               03 // Wins
             </p>
-          </div>
-          <div className="mx-auto max-w-6xl border-t border-white/10 px-4 sm:px-8">
-            {wins.map((win) => (
-              <a
-                key={win.event}
-                href={win.href}
-                target="_blank"
-                rel="noreferrer"
-                className="grid grid-cols-[minmax(7rem,1fr)_minmax(8rem,1.2fr)] gap-3 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[12rem_15rem_1fr] sm:px-3"
-              >
-                <p className="font-sans text-xs text-white/85 sm:text-base">{win.event}</p>
-                <p className="font-mono text-[9px] uppercase leading-5 tracking-wider text-white/65 sm:text-[11px]">{win.result}</p>
-                <p className="hidden font-sans text-[15px] leading-6 text-white/60 sm:block">{win.detail}</p>
-              </a>
-            ))}
+            <figure
+              className="relative mx-auto mb-8 max-w-full overflow-hidden border border-white/10 bg-black"
+              style={{
+                aspectRatio: '4 / 3',
+                width: 'min(100%, 106.667dvh)',
+              }}
+            >
+              <motion.img
+                key={featuredWin.image}
+                src={featuredWin.image}
+                alt={featuredWin.alt}
+                initial={reducedMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.35 }}
+                className="block h-full w-full object-contain object-center grayscale contrast-125 brightness-75"
+              />
+              <figcaption aria-live="polite" className="absolute bottom-0 left-0 w-full border-r border-t border-white/15 bg-black/95 px-5 py-5 sm:max-w-[58%] sm:px-8 sm:py-7">
+                <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
+                  {featuredWin.label}
+                </p>
+                <h3 className="font-sans text-xl font-light leading-tight text-white sm:text-2xl">
+                  {featuredWin.headline}
+                </h3>
+              </figcaption>
+              <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
+                <button
+                  type="button"
+                  aria-label="Previous win"
+                  onClick={() => setActiveWin((activeWin - 1 + featuredWins.length) % featuredWins.length)}
+                  className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                >
+                  ←
+                </button>
+                <span className="border-x border-white/15 px-4 py-3">
+                  {String(activeWin + 1).padStart(2, '0')} / {String(featuredWins.length).padStart(2, '0')}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next win"
+                  onClick={() => setActiveWin((activeWin + 1) % featuredWins.length)}
+                  className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                >
+                  →
+                </button>
+              </div>
+            </figure>
           </div>
         </section>
 
