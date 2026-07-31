@@ -40,7 +40,9 @@ export default function Members() {
                 <img
                   src={member.image}
                   alt={member.name}
-                  className="h-full w-full object-cover object-center grayscale contrast-110 brightness-85 transition-transform duration-500 group-hover:scale-[1.015]"
+                  className={`h-full w-full object-center grayscale contrast-110 brightness-85 transition-transform duration-500 group-hover:scale-[1.015] ${
+                    index === 1 ? 'object-contain' : 'object-cover'
+                  }`}
                 />
               </div>
               <div className="p-5 sm:p-6">

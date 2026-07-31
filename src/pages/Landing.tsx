@@ -117,7 +117,7 @@ export default function Landing() {
       <div className="relative z-20 border-t border-white/10 bg-black/90">
         <section className="mx-auto max-w-6xl px-4 sm:px-8">
           <div className="py-16">
-            <p className="mb-10 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
+            <p className="mb-10 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
             02 // What We Are
             </p>
             <div className="grid gap-8 md:grid-cols-2 md:gap-16">
@@ -146,7 +146,7 @@ export default function Landing() {
 
         <section className="border-b border-white/10">
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
-            <p className="py-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
+            <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
               03 // Mentorship
             </p>
             <div className="grid gap-8 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
@@ -159,11 +159,18 @@ export default function Landing() {
                 <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/45">
                   Current mentor network
                 </p>
-                <img
-                  src="/mentor-payu.png"
-                  alt="PayU"
-                  className="mt-4 h-24 w-56 object-contain"
-                />
+                <div className="mt-4 flex flex-col items-start gap-5">
+                  <img
+                    src="/mentor-de-shaw.png"
+                    alt="D. E. Shaw & Co."
+                    className="h-auto w-56"
+                  />
+                  <img
+                    src="/mentor-payu.png"
+                    alt="PayU"
+                    className="h-auto w-56"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -171,7 +178,7 @@ export default function Landing() {
 
         <section className="border-b border-white/10">
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
-            <p className="py-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 sm:text-[11px]">
+            <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
               04 // Wins
             </p>
             <figure
