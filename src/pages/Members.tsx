@@ -7,17 +7,17 @@ const members = [
     name: 'Shaurya Singh',
     position: 'President',
     role: 'Founding Engineer @ Agilow',
-    image: '/member-shaurya-singh.png?v=4',
+    image: '/member-shaurya-singh.png?v=6',
   },
   {
     name: 'Naman Sharma',
     role: 'Technology and Digital Intern @ Protiviti',
-    image: '/member-naman-sharma.png',
+    image: '/member-naman-sharma.png?v=2',
   },
   {
     name: 'Kosaraju Jethin',
     role: 'Co-Founder, Grenwall',
-    image: '/member-kosaraju-jethin.png',
+    image: '/member-kosaraju-jethin.png?v=2',
   },
 ]
 
@@ -40,8 +40,8 @@ export default function Members() {
                 <img
                   src={member.image}
                   alt={member.name}
-                  className={`h-full w-full object-center grayscale contrast-110 brightness-85 transition-transform duration-500 group-hover:scale-[1.015] ${
-                    index === 1 ? 'object-contain' : 'object-cover'
+                  className={`h-full w-full object-cover grayscale contrast-110 brightness-85 transition-transform duration-500 group-hover:scale-[1.015] ${
+                    index === 1 ? 'object-bottom' : 'object-center'
                   }`}
                 />
               </div>

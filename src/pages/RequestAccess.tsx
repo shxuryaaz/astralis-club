@@ -18,17 +18,59 @@ function GoogleIcon() {
   )
 }
 
-const steps = [
+type Values = {
+  name: string
+  email: string
+  wins: string
+  shipped: string
+  building: string
+  contribution: string
+  password: string
+}
+
+type Field = keyof Values
+
+type Step = {
+  field: Field
+  label: string
+  question: string
+  hint: string
+  placeholder: string
+  type: 'text' | 'email' | 'url' | 'textarea' | 'password'
+  maxLength?: number
+}
+
+const steps: Step[] = [
   { field: 'name', label: 'Identity', question: "What's your name?", hint: 'The name people know you by.', placeholder: 'Full name', type: 'text' },
   { field: 'email', label: 'Contact', question: 'Where can we reach you?', hint: 'One address. No mailing list.', placeholder: 'you@domain.com', type: 'email' },
-  { field: 'work', label: 'Work', question: 'Show us how you think.', hint: 'Link one thing you made and tell us why it matters.', placeholder: 'https://… — what it is, what you did, what changed.', type: 'textarea' },
-  { field: 'agency', label: 'Agency', question: 'What did nobody ask you to do?', hint: 'A thing you built, fixed, organized, or started on your own.', placeholder: 'I noticed… so I…', type: 'textarea' },
-  { field: 'focus', label: 'Obsession', question: 'What keeps pulling you back?', hint: 'A problem, field, or question you cannot leave alone.', placeholder: 'Right now I am trying to understand…', type: 'textarea' },
+  {
+    field: 'wins',
+    label: 'Proof',
+    question: 'What have you won?',
+    hint: "A hackathon podium, a case comp, a national round. 'Nothing yet' is an acceptable answer, but the next two better be good.",
+    placeholder: 'What you won, where you placed, and who you beat.',
+    type: 'textarea',
+  },
+  {
+    field: 'shipped',
+    label: 'Work',
+    question: 'What have you shipped?',
+    hint: "One link. The thing you're proudest of. One line on why.",
+    placeholder: 'https://… — one line on why it matters.',
+    type: 'text',
+    maxLength: 250,
+  },
+  {
+    field: 'building',
+    label: 'Now',
+    question: 'What are you building right now?',
+    hint: "Present tense. 'Planning to' doesn't count.",
+    placeholder: 'Right now I am building…',
+    type: 'textarea',
+  },
   { field: 'contribution', label: 'Contribution', question: 'What can the room ask of you?', hint: 'Be specific about the judgment, skill, or perspective you bring.', placeholder: 'Come to me when you need…', type: 'textarea' },
   { field: 'password', label: 'Access', question: 'Set a password.', hint: 'At least eight characters. Or continue with Google.', placeholder: '••••••••', type: 'password' },
-] as const
-
-type Values = Record<(typeof steps)[number]['field'], string>
+]
 
 export default function RequestAccess() {
   const navigate = useNavigate()
@@ -37,9 +79,9 @@ export default function RequestAccess() {
   const [values, setValues] = useState<Values>({
     name: '',
     email: '',
-    work: '',
-    agency: '',
-    focus: '',
+    wins: '',
+    shipped: '',
+    building: '',
     contribution: '',
     password: '',
   })
@@ -53,14 +95,17 @@ export default function RequestAccess() {
   const step = steps[current]
   const value = values[step.field]
   const isLast = current === steps.length - 1
-  const isValid = value.trim().length > 0 && (step.field !== 'password' || value.length >= 8)
+  const isValid =
+    step.field === 'shipped'
+        ? /^(https?:\/\/\S+)\s+.+$/i.test(values.shipped.trim())
+        : value.trim().length > 0 && (step.field !== 'password' || value.length >= 8)
   const duplicateAccountError = error === 'That email already has an account. Sign in instead.'
 
   function applicationReason() {
     return [
-      `WORK\n${values.work.trim()}`,
-      `AGENCY\n${values.agency.trim()}`,
-      `OBSESSION\n${values.focus.trim()}`,
+      `WINS\n${values.wins.trim()}`,
+      `SHIPPED\n${values.shipped.trim()}`,
+      `BUILDING NOW\n${values.building.trim()}`,
       `CONTRIBUTION\n${values.contribution.trim()}`,
     ].join('\n\n')
   }
@@ -265,16 +310,42 @@ export default function RequestAccess() {
                   autoFocus
                   type={step.type}
                   value={value}
-                  onChange={(e) => setValues((v) => ({ ...v, [step.field]: e.target.value }))}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      [step.field]: step.maxLength ? e.target.value.slice(0, step.maxLength) : e.target.value,
+                    }))
+                  }
                   onKeyDown={handleKey}
                   placeholder={step.placeholder}
-                  autoComplete={step.field === 'email' ? 'email' : step.field === 'password' ? 'new-password' : 'name'}
+                  maxLength={step.maxLength}
+                  autoComplete={
+                    step.field === 'email'
+                      ? 'email'
+                      : step.field === 'password'
+                        ? 'new-password'
+                        : step.type === 'url'
+                          ? 'url'
+                          : 'name'
+                  }
                   className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                 />
               )}
 
               {step.type === 'textarea' && (
                 <p className="mt-2 text-right font-mono text-[9px] text-white/25">{500 - value.length}</p>
+              )}
+
+              {step.maxLength && (
+                <p className="mt-2 text-right font-mono text-[9px] text-white/25">
+                  {step.maxLength - value.length}
+                </p>
+              )}
+
+              {step.field === 'shipped' && values.shipped.trim() && !isValid && (
+                <p className="mt-3 font-mono text-[9px] leading-5 text-white/40">
+                  Start with an http:// or https:// link, then add one line on why.
+                </p>
               )}
 
               {step.field === 'email' && (

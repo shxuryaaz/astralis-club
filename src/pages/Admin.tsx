@@ -400,7 +400,9 @@ export default function Admin() {
                                   ? 'Linked · access not approved yet'
                                   : 'Already approved in Members — dismiss to remove from queue'}
                           </p>
-                          <p className="font-sans text-xs text-white/68 leading-relaxed max-w-md">{req.reason}</p>
+                          <p className="max-w-md whitespace-pre-wrap font-sans text-xs leading-relaxed text-white/68">
+                            {req.reason}
+                          </p>
                           <p className="font-mono text-[10px] tracking-wider text-white/35 mt-2">
                             {formatTimestamp(req.created_at)}
                           </p>
