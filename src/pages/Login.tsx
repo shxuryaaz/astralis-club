@@ -17,7 +17,7 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const { user, loading, signIn } = useAuth()
+  const { user, profile, loading, signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -29,16 +29,14 @@ export default function Login() {
     setGoogleBusy(true)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/request` },
     })
   }
 
-  // Once auth state resolves with a user, redirect to dashboard.
-  // This handles both the "already logged in" case and the post-login redirect —
-  // no manual navigate() needed, which avoids the race where the route renders
-  // before the auth state has propagated.
+  // Pending accounts must complete the application before reaching the member area.
   if (!loading && user) {
-    return <Navigate to="/dashboard" replace />
+    const hasAccess = profile?.role === 'admin' || profile?.approved === true
+    return <Navigate to={hasAccess ? '/dashboard' : '/request'} replace />
   }
 
   async function handleSubmit(e: FormEvent) {

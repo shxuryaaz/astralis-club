@@ -123,6 +123,9 @@ ALTER TABLE hackathons      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE access_requests ENABLE ROW LEVEL SECURITY;
 
+CREATE UNIQUE INDEX IF NOT EXISTS access_requests_email_unique
+  ON access_requests (lower(email));
+
 -- Drop existing policies before recreating (safe re-run)
 DROP POLICY IF EXISTS "profiles_select"               ON profiles;
 DROP POLICY IF EXISTS "profiles_update_admin"         ON profiles;
@@ -132,6 +135,7 @@ DROP POLICY IF EXISTS "messages_select"               ON messages;
 DROP POLICY IF EXISTS "messages_insert"               ON messages;
 DROP POLICY IF EXISTS "access_requests_insert"        ON access_requests;
 DROP POLICY IF EXISTS "access_requests_select_admin"  ON access_requests;
+DROP POLICY IF EXISTS "access_requests_select_own"    ON access_requests;
 DROP POLICY IF EXISTS "access_requests_delete_admin"  ON access_requests;
 
 -- profiles ───────────────────────────────────────────────────
@@ -177,6 +181,14 @@ CREATE POLICY "access_requests_insert"
 CREATE POLICY "access_requests_select_admin"
   ON access_requests FOR SELECT
   USING (get_my_role() = 'admin');
+
+-- Signed-in applicants can detect their own submitted request
+CREATE POLICY "access_requests_select_own"
+  ON access_requests FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    AND lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
 
 -- Only admins can dismiss (delete) requests
 CREATE POLICY "access_requests_delete_admin"

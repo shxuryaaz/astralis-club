@@ -21,12 +21,13 @@ function AccessPending() {
           Access Pending
         </p>
         <p className="font-sans text-sm text-white/55 max-w-xs mx-auto">
-          Your application is under review. We'll be in touch if selected.
+          Open your application to complete it or check its status.
         </p>
         {user?.email && (
           <p className="font-mono text-[10px] text-white/32 pt-2">{user.email}</p>
         )}
         <div className="flex justify-center gap-6 pt-2 font-mono text-[10px] uppercase tracking-widest text-white/42">
+          <Link to="/request" className="hover:text-white/78 transition-colors">Application</Link>
           <Link to="/" className="hover:text-white/78 transition-colors">Return home</Link>
           <button
             type="button"

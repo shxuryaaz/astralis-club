@@ -78,9 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: pending.email || s.user.email || '',
               reason: pending.reason || '',
             })
-            if (!error) {
+            if (!error || error.code === '23505') {
               sessionStorage.removeItem('astralis_pending_request')
-              void capturePostHog('access_request_submitted', { signup_method: 'google' })
+              if (!error) {
+                void capturePostHog('access_request_submitted', { signup_method: 'google' })
+              }
             }
           } catch {
             // non-critical — admin can still see the user in Members tab

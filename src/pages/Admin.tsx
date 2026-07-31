@@ -364,7 +364,7 @@ export default function Admin() {
             <p className={labelClass}>Request queue</p>
             <p className="font-sans text-xs text-white/62 max-w-2xl mt-3 leading-relaxed">
               Submitted applications and pending accounts created directly through sign-in appear here. Approving
-              grants access and removes the item from the queue.
+              grants access and removes the item from the queue. Direct sign-ins cannot be approved until they apply.
             </p>
             {requests.length > 0 && approvedInQueueCount > 0 && (
               <div className="mt-6">
@@ -393,7 +393,7 @@ export default function Admin() {
                           <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">{req.email}</p>
                           <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/48">
                             {req.accountOnly
-                              ? 'Pending account · no application submitted'
+                              ? 'Pending account · application required'
                               : link === 'no_profile'
                                 ? 'No member profile for this email'
                                 : link === 'pending'
@@ -413,7 +413,7 @@ export default function Admin() {
                           )}
                         </div>
                         <div className="flex flex-shrink-0 justify-end gap-5 pt-1">
-                          {link === 'pending' && (
+                          {link === 'pending' && !req.accountOnly && (
                             <button
                               type="button"
                               disabled={busy}

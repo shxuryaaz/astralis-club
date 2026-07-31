@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react'
+import { useEffect, useState, KeyboardEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import AstralisBackground from '../components/AstralisBackground'
 import { motion, AnimatePresence } from 'motion/react'
@@ -36,11 +36,11 @@ type Step = {
   question: string
   hint: string
   placeholder: string
-  type: 'text' | 'email' | 'url' | 'textarea' | 'password'
+  type: 'text' | 'email' | 'textarea' | 'password'
   maxLength?: number
 }
 
-const steps: Step[] = [
+const allSteps: Step[] = [
   { field: 'name', label: 'Identity', question: "What's your name?", hint: 'The name people know you by.', placeholder: 'Full name', type: 'text' },
   { field: 'email', label: 'Contact', question: 'Where can we reach you?', hint: 'One address. No mailing list.', placeholder: 'you@domain.com', type: 'email' },
   {
@@ -74,7 +74,7 @@ const steps: Step[] = [
 
 export default function RequestAccess() {
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [current, setCurrent] = useState(0)
   const [values, setValues] = useState<Values>({
     name: '',
@@ -89,9 +89,13 @@ export default function RequestAccess() {
   const [submitting, setSubmitting] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
+  const [checkingApplication, setCheckingApplication] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
+  const steps = user
+    ? allSteps.filter((candidate) => !['name', 'email', 'password'].includes(candidate.field))
+    : allSteps
   const step = steps[current]
   const value = values[step.field]
   const isLast = current === steps.length - 1
@@ -100,6 +104,38 @@ export default function RequestAccess() {
         ? /^(https?:\/\/\S+)\s+.+$/i.test(values.shipped.trim())
         : value.trim().length > 0 && (step.field !== 'password' || value.length >= 8)
   const duplicateAccountError = error === 'That email already has an account. Sign in instead.'
+
+  useEffect(() => {
+    if (!user) return
+    setValues((currentValues) => ({
+      ...currentValues,
+      name: profile?.name || user.user_metadata?.name || currentValues.name,
+      email: user.email || currentValues.email,
+    }))
+  }, [profile?.name, user])
+
+  useEffect(() => {
+    if (!user?.email) return
+    let cancelled = false
+    setCheckingApplication(true)
+
+    supabase
+      .from('access_requests')
+      .select('id')
+      .eq('email', user.email.toLowerCase())
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error: requestError }) => {
+        if (cancelled) return
+        if (requestError) console.error('application check:', requestError.message)
+        if (data) setDone(true)
+        setCheckingApplication(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.email])
 
   function applicationReason() {
     return [
@@ -159,7 +195,7 @@ export default function RequestAccess() {
     }))
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/request` },
     })
     if (error) {
       sessionStorage.removeItem('astralis_pending_request')
@@ -170,6 +206,34 @@ export default function RequestAccess() {
 
   async function handleSubmit() {
     setSubmitting(true)
+
+    if (user) {
+      const email = user.email?.trim().toLowerCase()
+      const name = profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Member'
+
+      if (!email) {
+        setError('Your Google account did not provide an email address.')
+        setSubmitting(false)
+        return
+      }
+
+      const { error: reqError } = await supabase.from('access_requests').insert({
+        name,
+        email,
+        reason: applicationReason(),
+      })
+
+      if (reqError && reqError.code !== '23505') {
+        setError('We could not submit your request. Please try again.')
+        setSubmitting(false)
+        return
+      }
+
+      void capturePostHog('access_request_submitted', { signup_method: 'authenticated' })
+      setDone(true)
+      setSubmitting(false)
+      return
+    }
 
     // Create the Supabase auth account (triggers profile creation)
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -215,7 +279,17 @@ export default function RequestAccess() {
     exit:   (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30 }),
   }
 
-  if (!loading && user) return <Navigate to="/dashboard" replace />
+  if (!loading && user && (profile?.approved || profile?.role === 'admin')) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (checkingApplication) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-black text-white">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-white/42">Checking application</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-black px-5 py-24 text-white sm:px-6 md:px-8">
@@ -266,7 +340,7 @@ export default function RequestAccess() {
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">Application received</p>
               <p className="font-display text-4xl tracking-[-0.035em]">Your work is now in the room.</p>
               <p className="max-w-md font-sans text-sm leading-7 text-white/52">
-                We review applications weekly. If there is a fit, you will hear from us at {values.email}.
+                We review applications weekly. If there is a fit, you will hear from us at {user?.email || values.email}.
               </p>
               <div className="pt-6">
                 <Link to="/" className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white">
@@ -324,9 +398,7 @@ export default function RequestAccess() {
                       ? 'email'
                       : step.field === 'password'
                         ? 'new-password'
-                        : step.type === 'url'
-                          ? 'url'
-                          : 'name'
+                        : 'name'
                   }
                   className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                 />
@@ -376,7 +448,7 @@ export default function RequestAccess() {
                 </button>
               </div>
 
-              {isLast && (
+              {isLast && !user && (
                 <div className="mt-8 flex items-center justify-end gap-4 border-t border-white/[0.07] pt-6">
                   <span className="font-mono text-[9px] text-white/25">or</span>
                   <button
