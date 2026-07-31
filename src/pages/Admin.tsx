@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { capturePostHog } from '../lib/posthog'
 import type { Hackathon, UserProfile, AccessRequest } from '../types'
 
+type QueueRequest = AccessRequest & { accountOnly?: boolean }
+
 type HackathonForm = {
   title: string
   date: string
@@ -26,7 +28,7 @@ const labelClass = 'font-mono text-[10px] tracking-widest uppercase text-white/5
 export default function Admin() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
-  const [requests, setRequests] = useState<AccessRequest[]>([])
+  const [requests, setRequests] = useState<QueueRequest[]>([])
   const [form, setForm] = useState<HackathonForm>(emptyForm)
   const [editing, setEditing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
@@ -44,7 +46,7 @@ export default function Admin() {
 
   type RequestLinkStatus = 'no_profile' | 'pending' | 'approved'
 
-  function requestLinkStatus(req: AccessRequest): RequestLinkStatus {
+  function requestLinkStatus(req: QueueRequest): RequestLinkStatus {
     const p = profileForRequestEmail(req.email)
     if (!p) return 'no_profile'
     if (p.approved) return 'approved'
@@ -65,8 +67,33 @@ export default function Admin() {
     if (userRes.error) console.error('profiles:', userRes.error.message)
     if (reqRes.error) console.error('access_requests:', reqRes.error.message)
     if (hackRes.data) setHackathons(hackRes.data as Hackathon[])
-    if (userRes.data) setUsers(userRes.data as UserProfile[])
-    if (reqRes.data) setRequests(reqRes.data as AccessRequest[])
+    if (userRes.data && reqRes.data) {
+      const nextUsers = userRes.data as UserProfile[]
+      const savedRequests = reqRes.data as AccessRequest[]
+      const requestedEmails = new Set(savedRequests.map((request) => normEmail(request.email)))
+      const accountOnlyRequests: QueueRequest[] = nextUsers
+        .filter(
+          (profile) =>
+            profile.role === 'member' &&
+            !profile.approved &&
+            !requestedEmails.has(normEmail(profile.email)),
+        )
+        .map((profile) => ({
+          id: `profile:${profile.id}`,
+          name: profile.name,
+          email: profile.email,
+          reason: 'Account created directly without submitting the request form.',
+          created_at: profile.created_at,
+          accountOnly: true,
+        }))
+
+      setUsers(nextUsers)
+      setRequests(
+        [...savedRequests, ...accountOnlyRequests].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        ),
+      )
+    }
     setLoading(false)
   }
 
@@ -109,7 +136,7 @@ export default function Admin() {
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
 
-  async function approveRequest(req: AccessRequest) {
+  async function approveRequest(req: QueueRequest) {
     setRowError(null)
     setBusyRequestId(req.id)
     const match = profileForRequestEmail(req.email)
@@ -141,14 +168,16 @@ export default function Admin() {
     setUsers((prev) =>
       prev.map((u) => (normEmail(u.email) === normEmail(req.email) ? { ...u, approved: true } : u))
     )
-    await supabase.from('access_requests').delete().eq('id', req.id)
+    if (!req.accountOnly) {
+      await supabase.from('access_requests').delete().eq('id', req.id)
+    }
     setRequests((prev) => prev.filter((r) => r.id !== req.id))
     await fetchAll()
     void capturePostHog('access_request_approved')
     setBusyRequestId(null)
   }
 
-  async function dismissRequest(req: AccessRequest) {
+  async function dismissRequest(req: QueueRequest) {
     setRowError(null)
     setBusyRequestId(req.id)
     const { error } = await supabase.from('access_requests').delete().eq('id', req.id)
@@ -330,13 +359,12 @@ export default function Admin() {
             )}
           </div>
         ) : activeTab === 'requests' ? (
-          /* Requests tab — access_requests rows; independent from profiles until you approve/dismiss */
+          /* Requests tab — submitted applications plus pending accounts created directly through sign-in */
           <div>
             <p className={labelClass}>Request queue</p>
             <p className="font-sans text-xs text-white/62 max-w-2xl mt-3 leading-relaxed">
-              These are saved applications from the site. The list does not auto-clear: approving a member updates
-              their profile but leaves the row here until you dismiss it (or use clear below). If there is no matching
-              row under Members for that email, Approve is disabled — the application can still be dismissed.
+              Submitted applications and pending accounts created directly through sign-in appear here. Approving
+              grants access and removes the item from the queue.
             </p>
             {requests.length > 0 && approvedInQueueCount > 0 && (
               <div className="mt-6">
@@ -364,9 +392,13 @@ export default function Admin() {
                           <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
                           <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">{req.email}</p>
                           <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/48">
-                            {link === 'no_profile' && 'No member profile for this email'}
-                            {link === 'pending' && 'Linked · access not approved yet'}
-                            {link === 'approved' && 'Already approved in Members — dismiss to remove from queue'}
+                            {req.accountOnly
+                              ? 'Pending account · no application submitted'
+                              : link === 'no_profile'
+                                ? 'No member profile for this email'
+                                : link === 'pending'
+                                  ? 'Linked · access not approved yet'
+                                  : 'Already approved in Members — dismiss to remove from queue'}
                           </p>
                           <p className="font-sans text-xs text-white/68 leading-relaxed max-w-md">{req.reason}</p>
                           <p className="font-mono text-[10px] tracking-wider text-white/35 mt-2">
@@ -389,14 +421,16 @@ export default function Admin() {
                               {busy && busyRequestId === req.id ? '…' : 'Approve'}
                             </button>
                           )}
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => dismissRequest(req)}
-                            className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
-                          >
-                            Dismiss
-                          </button>
+                          {!req.accountOnly && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => dismissRequest(req)}
+                              className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
+                            >
+                              Dismiss
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

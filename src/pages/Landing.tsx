@@ -152,14 +152,11 @@ export default function Landing() {
             <div className="grid gap-8 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
               <div>
                 <h2 className="max-w-2xl font-sans text-3xl font-light leading-tight text-white/90 sm:text-5xl">
-                  Mentored by people building at scale.
+                  Mentored by people from
                 </h2>
               </div>
               <div className="border-l border-white/10 pl-6 md:w-72 md:pl-10">
-                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/45">
-                  Current mentor network
-                </p>
-                <div className="mt-4 flex flex-col items-start gap-5">
+                <div className="flex flex-col items-start gap-5">
                   <img
                     src="/mentor-de-shaw.png"
                     alt="D. E. Shaw & Co."
@@ -195,7 +192,7 @@ export default function Landing() {
                 initial={reducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.35 }}
-                className="block h-full w-full object-contain object-center"
+                className="block h-full w-full object-contain object-center grayscale brightness-110 contrast-110"
               />
               <figcaption aria-live="polite" className="absolute bottom-0 left-0 w-full border-r border-t border-white/15 bg-black/95 px-5 py-5 sm:max-w-[58%] sm:px-8 sm:py-7">
                 <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
