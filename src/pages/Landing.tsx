@@ -147,12 +147,12 @@ export default function Landing() {
         <section className="border-b border-white/10">
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
             <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
-              03 // Mentorship
+              03 // Mentors
             </p>
             <div className="grid gap-8 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
               <div>
                 <h2 className="max-w-2xl font-sans text-3xl font-light leading-tight text-white/90 sm:text-5xl">
-                  Mentored by people from
+                  Our Mentors are from
                 </h2>
               </div>
               <div className="border-l border-white/10 pl-6 md:w-72 md:pl-10">
