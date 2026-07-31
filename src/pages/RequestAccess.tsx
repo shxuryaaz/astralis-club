@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import AstralisBackground from '../components/AstralisBackground'
 import { motion, AnimatePresence } from 'motion/react'
 import { supabase } from '../lib/supabase'
+import { capturePostHog } from '../lib/posthog'
 import AstralisLogo from '../components/AstralisLogo'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -159,6 +160,7 @@ export default function RequestAccess() {
       return
     }
 
+    void capturePostHog('access_request_submitted', { signup_method: 'email' })
     setDone(true)
   }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { capturePostHog } from '../lib/posthog'
 import type { Hackathon, UserProfile, AccessRequest } from '../types'
 
 type HackathonForm = {
@@ -143,6 +144,7 @@ export default function Admin() {
     await supabase.from('access_requests').delete().eq('id', req.id)
     setRequests((prev) => prev.filter((r) => r.id !== req.id))
     await fetchAll()
+    void capturePostHog('access_request_approved')
     setBusyRequestId(null)
   }
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { UserProfile } from '../types'
+import { capturePostHog, identifyPostHogUser, resetPostHog } from '../lib/posthog'
 
 interface AuthContextType {
   user: User | null
@@ -60,6 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const p = await fetchProfile(s.user.id)
         if (!mounted) return
         setProfile(p)
+        void identifyPostHogUser(s.user.id, {
+          email: s.user.email,
+          name: p?.name || s.user.user_metadata?.name,
+          role: p?.role,
+        })
 
         // After Google OAuth signup, submit the pending access request that was
         // saved to sessionStorage before the OAuth redirect in RequestAccess.
@@ -72,7 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: pending.email || s.user.email || '',
               reason: pending.reason || '',
             })
-            if (!error) sessionStorage.removeItem('astralis_pending_request')
+            if (!error) {
+              sessionStorage.removeItem('astralis_pending_request')
+              void capturePostHog('access_request_submitted', { signup_method: 'google' })
+            }
           } catch {
             // non-critical — admin can still see the user in Members tab
           }
@@ -120,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
     setSession(null)
     setLoading(false)
+    void resetPostHog()
   }
 
   return (

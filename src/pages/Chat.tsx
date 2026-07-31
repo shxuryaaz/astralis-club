@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, FormEvent, KeyboardEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { capturePostHog } from '../lib/posthog'
 import { useAuth } from '../contexts/AuthContext'
 import type { Message } from '../types'
 
@@ -66,6 +67,8 @@ export default function Chat() {
     if (error) {
       setInput(trimmed)
       setSendError('Failed to send. Try again.')
+    } else {
+      void capturePostHog('chat_message_sent')
     }
   }
 
