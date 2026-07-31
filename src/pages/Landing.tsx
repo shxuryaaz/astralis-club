@@ -162,7 +162,7 @@ export default function Landing() {
                 <img
                   src="/mentor-payu.png"
                   alt="PayU"
-                  className="mt-4 h-24 w-56 object-contain grayscale invert mix-blend-screen contrast-125"
+                  className="mt-4 h-24 w-56 object-contain"
                 />
               </div>
             </div>
