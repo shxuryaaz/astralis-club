@@ -152,7 +152,7 @@ export default function Landing() {
             <div className="grid gap-8 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
               <div>
                 <h2 className="max-w-2xl font-sans text-3xl font-light leading-tight text-white/90 sm:text-5xl">
-                  We are mentored by people from -
+                  We are mentored by people who work at the following companies
                 </h2>
               </div>
               <div className="border-l border-white/10 pl-6 md:w-72 md:pl-10">
