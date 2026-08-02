@@ -158,6 +158,11 @@ export default function Landing() {
               <div className="border-l border-white/10 pl-6 md:w-72 md:pl-10">
                 <div className="flex flex-col items-start gap-5">
                   <img
+                    src="/mentor-goldman-sachs.png"
+                    alt="Goldman Sachs"
+                    className="h-auto w-56"
+                  />
+                  <img
                     src="/mentor-de-shaw.png"
                     alt="D. E. Shaw & Co."
                     className="h-auto w-56"
