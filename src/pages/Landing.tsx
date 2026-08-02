@@ -149,29 +149,34 @@ export default function Landing() {
             <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
               03 // Mentors
             </p>
-            <div className="grid gap-8 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
+            <div className="grid gap-6 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
               <div>
                 <h2 className="max-w-2xl font-sans text-3xl font-light leading-tight text-white/90 sm:text-5xl">
-                  We are mentored by people who work at the following companies
+                  We are mentored by individuals who work at
                 </h2>
               </div>
-              <div className="border-l border-white/10 pl-6 md:w-72 md:pl-10">
-                <div className="flex flex-col items-start gap-5">
-                  <img
-                    src="/mentor-goldman-sachs.png"
-                    alt="Goldman Sachs"
-                    className="h-auto w-56"
-                  />
-                  <img
-                    src="/mentor-de-shaw.png"
-                    alt="D. E. Shaw & Co."
-                    className="h-auto w-56"
-                  />
-                  <img
-                    src="/mentor-payu.png"
-                    alt="PayU"
-                    className="h-auto w-56"
-                  />
+              <div className="min-w-0 border-t border-white/10 py-8 md:w-80 md:border-l md:border-t-0 md:py-0 md:pl-10">
+                <div className="flex min-w-0 flex-col items-start gap-10 text-[#c8c8c8] md:items-end md:gap-6">
+                  <div className="w-fit text-left font-playfair text-[1.75rem] font-bold leading-[1.05] tracking-[-0.5px] md:w-full md:text-right md:text-[clamp(2rem,5vw,2.5rem)]">
+                    <span className="block">Goldman</span>
+                    <span className="block">Sachs</span>
+                  </div>
+                  <div className="mr-auto text-left md:mr-0 md:ml-auto md:text-right">
+                    <div className="inline-block">
+                      <div aria-hidden="true" className="mb-2 grid h-4 w-full grid-cols-[63%_14%_3%_20%] items-end md:mb-1">
+                        <span className="h-px bg-[#c8c8c8]/60" />
+                        <span className="h-px origin-left -rotate-[18deg] bg-[#c8c8c8]/60" />
+                        <span />
+                        <span className="h-px bg-[#c8c8c8]/60" />
+                      </div>
+                      <span className="whitespace-nowrap font-garamond text-[1.65rem] font-medium leading-none tracking-[1px] md:text-[clamp(1.875rem,4.75vw,2.25rem)]">
+                        D E Shaw &amp; Co
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-fit text-left font-poppins text-[1.8rem] font-semibold leading-none md:w-full md:text-right md:text-[clamp(2.125rem,5.25vw,2.5rem)]">
+                    payu
+                  </div>
                 </div>
               </div>
             </div>
