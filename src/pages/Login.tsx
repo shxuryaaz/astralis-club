@@ -193,7 +193,7 @@ export default function Login() {
             }}
             className="text-white/42 transition-colors hover:text-white/75"
           >
-            {mode === 'password' ? 'Use email code' : 'Use password'}
+            {mode === 'password' ? 'Use email link' : 'Use password'}
           </button>
           {mode === 'otp' && otpSent && (
             <button
