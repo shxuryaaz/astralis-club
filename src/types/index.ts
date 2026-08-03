@@ -26,6 +26,7 @@ export interface Message {
 
 export interface AccessRequest {
   id: string
+  user_id: string | null
   name: string
   email: string
   reason: string

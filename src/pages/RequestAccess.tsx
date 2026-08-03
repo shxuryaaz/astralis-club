@@ -19,13 +19,10 @@ function GoogleIcon() {
 }
 
 type Values = {
-  name: string
-  email: string
   wins: string
   shipped: string
   building: string
   contribution: string
-  password: string
 }
 
 type Field = keyof Values
@@ -36,13 +33,11 @@ type Step = {
   question: string
   hint: string
   placeholder: string
-  type: 'text' | 'email' | 'textarea' | 'password'
+  type: 'text' | 'textarea'
   maxLength?: number
 }
 
-const allSteps: Step[] = [
-  { field: 'name', label: 'Identity', question: "What's your name?", hint: 'The name people know you by.', placeholder: 'Full name', type: 'text' },
-  { field: 'email', label: 'Contact', question: 'Where can we reach you?', hint: 'One address. No mailing list.', placeholder: 'you@domain.com', type: 'email' },
+const steps: Step[] = [
   {
     field: 'wins',
     label: 'Proof',
@@ -69,7 +64,6 @@ const allSteps: Step[] = [
     type: 'textarea',
   },
   { field: 'contribution', label: 'Contribution', question: 'What can the room ask of you?', hint: 'Be specific about the judgment, skill, or perspective you bring.', placeholder: 'Come to me when you need…', type: 'textarea' },
-  { field: 'password', label: 'Access', question: 'Set a password.', hint: 'At least eight characters. Or continue with Google.', placeholder: '••••••••', type: 'password' },
 ]
 
 export default function RequestAccess() {
@@ -77,52 +71,55 @@ export default function RequestAccess() {
   const { user, profile, loading } = useAuth()
   const [current, setCurrent] = useState(0)
   const [values, setValues] = useState<Values>({
-    name: '',
-    email: '',
     wins: '',
     shipped: '',
     building: '',
     contribution: '',
-    password: '',
   })
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [authStage, setAuthStage] = useState<'details' | 'sent'>('details')
+  const [resendIn, setResendIn] = useState(0)
   const [direction, setDirection] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
-  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [otpBusy, setOtpBusy] = useState(false)
   const [checkingApplication, setCheckingApplication] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
-  const steps = user
-    ? allSteps.filter((candidate) => !['name', 'email', 'password'].includes(candidate.field))
-    : allSteps
   const step = steps[current]
   const value = values[step.field]
   const isLast = current === steps.length - 1
   const isValid =
     step.field === 'shipped'
-        ? /^(https?:\/\/\S+)\s+.+$/i.test(values.shipped.trim())
-        : value.trim().length > 0 && (step.field !== 'password' || value.length >= 8)
-  const duplicateAccountError = error === 'That email already has an account. Sign in instead.'
+      ? /^(https?:\/\/\S+)\s+.+$/i.test(values.shipped.trim())
+      : value.trim().length > 0
 
   useEffect(() => {
     if (!user) return
-    setValues((currentValues) => ({
-      ...currentValues,
-      name: profile?.name || user.user_metadata?.name || currentValues.name,
-      email: user.email || currentValues.email,
-    }))
+    setName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
+    setEmail(user.email || '')
+    setCurrent(0)
   }, [profile?.name, user])
 
   useEffect(() => {
-    if (!user?.email) return
+    if (resendIn <= 0) return
+    const timer = window.setInterval(() => {
+      setResendIn((seconds) => Math.max(0, seconds - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [resendIn])
+
+  useEffect(() => {
+    if (!user?.id) return
     let cancelled = false
     setCheckingApplication(true)
 
     supabase
       .from('access_requests')
       .select('id')
-      .eq('email', user.email.toLowerCase())
+      .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
       .then(({ data, error: requestError }) => {
@@ -135,7 +132,7 @@ export default function RequestAccess() {
     return () => {
       cancelled = true
     }
-  }, [user?.email])
+  }, [user?.id])
 
   function applicationReason() {
     return [
@@ -147,28 +144,11 @@ export default function RequestAccess() {
   }
 
   async function next() {
-    if (!isValid || checkingEmail) return
+    if (!isValid) return
     setError('')
 
-    if (step.field === 'email') {
-      setCheckingEmail(true)
-      const { data: accountExists, error: checkError } = await supabase.rpc('email_has_account', {
-        candidate_email: value.trim(),
-      })
-      setCheckingEmail(false)
-
-      if (checkError) {
-        setError('Could not check that email. Try again.')
-        return
-      }
-      if (accountExists) {
-        setError('That email already has an account. Sign in instead.')
-        return
-      }
-    }
-
     if (isLast) {
-      handleSubmit()
+      void handleSubmit()
     } else {
       setDirection(1)
       setCurrent((c) => c + 1)
@@ -185,92 +165,78 @@ export default function RequestAccess() {
     if (e.key === 'Enter' && step.type !== 'textarea') { e.preventDefault(); next() }
   }
 
+  function otpErrorMessage(message?: string) {
+    const normalized = message?.toLowerCase() || ''
+    if (normalized.includes('rate') || normalized.includes('too many') || normalized.includes('security purposes')) {
+      return 'Too many verification requests. Wait a few minutes before trying again.'
+    }
+    if (normalized.includes('expired') || normalized.includes('invalid')) {
+      return 'That verification link is invalid or expired. Request a new one.'
+    }
+    return 'We could not complete email verification. Try again shortly.'
+  }
+
+  async function sendOtp() {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || otpBusy || resendIn > 0) return
+
+    setError('')
+    setOtpBusy(true)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: true,
+        data: { name: name.trim() },
+        emailRedirectTo: `${window.location.origin}/request`,
+      },
+    })
+    setOtpBusy(false)
+
+    if (otpError) {
+      setError(otpErrorMessage(otpError.message))
+      return
+    }
+
+    setAuthStage('sent')
+    setResendIn(60)
+  }
+
   async function handleGoogleSignup() {
     setError('')
     setGoogleBusy(true)
-    sessionStorage.setItem('astralis_pending_request', JSON.stringify({
-      name: values.name.trim(),
-      email: values.email.trim().toLowerCase(),
-      reason: applicationReason(),
-    }))
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/request` },
     })
     if (error) {
-      sessionStorage.removeItem('astralis_pending_request')
-      setError(error.message)
+      setError('Google sign-in could not start. Try again.')
       setGoogleBusy(false)
     }
   }
 
   async function handleSubmit() {
+    if (!user?.id || !user.email) return
     setSubmitting(true)
-
-    if (user) {
-      const email = user.email?.trim().toLowerCase()
-      const name = profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Member'
-
-      if (!email) {
-        setError('Your Google account did not provide an email address.')
-        setSubmitting(false)
-        return
-      }
-
-      const { error: reqError } = await supabase.from('access_requests').insert({
-        name,
-        email,
-        reason: applicationReason(),
-      })
-
-      if (reqError && reqError.code !== '23505') {
-        setError('We could not submit your request. Please try again.')
-        setSubmitting(false)
-        return
-      }
-
-      void capturePostHog('access_request_submitted', { signup_method: 'authenticated' })
-      setDone(true)
-      setSubmitting(false)
-      return
-    }
-
-    // Create the Supabase auth account (triggers profile creation)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: values.email.trim().toLowerCase(),
-      password: values.password,
-      options: { data: { name: values.name.trim() } },
-    })
-
-    if (authError) {
-      const alreadyExists = authError.message?.toLowerCase().includes('already registered')
-        || authError.message?.toLowerCase().includes('already exists')
-      setError(alreadyExists ? 'That email is already registered. Try signing in.' : 'Something went wrong. Try again.')
-      setSubmitting(false)
-      return
-    }
-
-    if (authData.user?.identities?.length === 0) {
-      setError('That email already has an account. Sign in instead.')
-      setSubmitting(false)
-      return
-    }
-
-    // Store reason for admin to review
     const { error: reqError } = await supabase.from('access_requests').insert({
-      name: values.name.trim(),
-      email: values.email.trim().toLowerCase(),
+      user_id: user.id,
+      name: profile?.name || user.user_metadata?.name || name || user.email.split('@')[0],
+      email: user.email.trim().toLowerCase(),
       reason: applicationReason(),
     })
 
-    if (reqError) {
-      setError('Account created, but we could not submit your request. Please contact us directly.')
+    if (reqError && reqError.code !== '23505') {
+      setError('We could not submit your request. Please try again.')
       setSubmitting(false)
       return
     }
 
-    void capturePostHog('access_request_submitted', { signup_method: 'email' })
+    if (!reqError) {
+      void capturePostHog('access_request_submitted', {
+        signup_method: user.app_metadata.provider === 'google' ? 'google' : 'email_otp',
+      })
+    }
     setDone(true)
+    setSubmitting(false)
   }
 
   const variants = {
@@ -299,34 +265,6 @@ export default function RequestAccess() {
         <AstralisLogo className="h-10 w-10" />
       </Link>
 
-      <AnimatePresence>
-        {duplicateAccountError && (
-          <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.24, ease: 'easeOut' }}
-            role="alert"
-            className="fixed inset-x-4 top-5 z-30 ml-auto flex max-w-md items-center gap-4 border border-white bg-[#e8e8e8] px-4 py-4 text-[#1b1b1b] shadow-2xl sm:left-auto sm:right-6 sm:top-6"
-          >
-            <p className="flex-1 font-mono text-[10px] leading-5">
-              That email already has an account.
-            </p>
-            <Link to="/login" className="font-mono text-[9px] uppercase tracking-[0.14em] hover:opacity-60">
-              Sign in
-            </Link>
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={() => setError('')}
-              className="px-1 opacity-50 hover:opacity-100"
-            >
-              ×
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="relative z-20 w-full max-w-xl">
         <AnimatePresence mode="wait" custom={direction}>
           {done ? (
@@ -340,13 +278,127 @@ export default function RequestAccess() {
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">Application received</p>
               <p className="font-display text-4xl tracking-[-0.035em]">Your work is now in the room.</p>
               <p className="max-w-md font-sans text-sm leading-7 text-white/52">
-                We review applications weekly. If there is a fit, you will hear from us at {user?.email || values.email}.
+                We review applications weekly. If there is a fit, you will hear from us at {user?.email || email}.
               </p>
               <div className="pt-6">
                 <Link to="/" className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white">
                   Return home
                 </Link>
               </div>
+            </motion.div>
+          ) : !user ? (
+            <motion.div
+              key={authStage}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+            >
+              <div className="mb-12 flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">
+                  {authStage === 'details' ? 'Identity' : 'Verification sent'}
+                </p>
+                <p className="font-mono text-[9px] tracking-[0.12em] text-white/28">
+                  {authStage === 'details' ? '01 / 02' : '02 / 02'}
+                </p>
+              </div>
+
+              <h2 className="mb-3 font-display text-2xl tracking-[-0.03em] sm:text-3xl md:text-4xl">
+                {authStage === 'details' ? 'Verify your email.' : 'Check your inbox.'}
+              </h2>
+              <p className="mb-9 max-w-md font-sans text-sm leading-6 text-white/42">
+                {authStage === 'details'
+                  ? 'We verify every inbox before accepting an application.'
+                  : `We sent a secure sign-in link to ${email.trim().toLowerCase()}. Open it to continue your application.`}
+              </p>
+
+              {authStage === 'details' ? (
+                <div className="space-y-6">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value.slice(0, 100))}
+                    placeholder="Full name"
+                    autoComplete="name"
+                    className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
+                  />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void sendOtp()
+                      }
+                    }}
+                    placeholder="you@domain.com"
+                    autoComplete="email"
+                    className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
+                  />
+                </div>
+              ) : null}
+
+              {error && <p className="mt-4 font-mono text-[10px] leading-5 text-white/55">{error}</p>}
+
+              <div className="mt-12 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (authStage === 'sent') {
+                      setAuthStage('details')
+                      setError('')
+                    } else {
+                      navigate('/')
+                    }
+                  }}
+                  className="py-2 font-mono text-[9px] uppercase tracking-[0.16em] text-white/38 transition-colors hover:text-white"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void sendOtp()}
+                  disabled={
+                    otpBusy ||
+                    authStage === 'sent' ||
+                    !name.trim() ||
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+                  }
+                  className="border border-white/15 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.16em] text-white/62 transition-colors hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                >
+                  {otpBusy ? 'Working' : authStage === 'details' ? 'Send link' : 'Link sent'}
+                </button>
+              </div>
+
+              {authStage === 'sent' && (
+                <div className="mt-8 flex items-center justify-end gap-4 border-t border-white/[0.07] pt-6">
+                  <button
+                    type="button"
+                    onClick={() => void sendOtp()}
+                    disabled={otpBusy || resendIn > 0}
+                    className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white disabled:cursor-not-allowed disabled:text-white/25"
+                  >
+                    {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend link'}
+                  </button>
+                </div>
+              )}
+
+              {authStage === 'details' && (
+                <div className="mt-8 flex items-center justify-end gap-4 border-t border-white/[0.07] pt-6">
+                  <span className="font-mono text-[9px] text-white/25">or</span>
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignup}
+                    disabled={googleBusy || otpBusy}
+                    className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                  >
+                    <GoogleIcon />
+                    {googleBusy ? 'Redirecting…' : 'Continue with Google'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div
@@ -393,13 +445,7 @@ export default function RequestAccess() {
                   onKeyDown={handleKey}
                   placeholder={step.placeholder}
                   maxLength={step.maxLength}
-                  autoComplete={
-                    step.field === 'email'
-                      ? 'email'
-                      : step.field === 'password'
-                        ? 'new-password'
-                        : 'name'
-                  }
+                  autoComplete="off"
                   className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                 />
               )}
@@ -420,14 +466,7 @@ export default function RequestAccess() {
                 </p>
               )}
 
-              {step.field === 'email' && (
-                <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.12em] text-white/35">
-                  Already registered?{' '}
-                  <Link to="/login" className="text-white/65 hover:text-white">Sign in</Link>
-                </p>
-              )}
-
-              {error && !duplicateAccountError && <p className="mt-4 font-mono text-[10px] leading-5 text-white/55">{error}</p>}
+              {error && <p className="mt-4 font-mono text-[10px] leading-5 text-white/55">{error}</p>}
 
               <div className="mt-12 flex items-center justify-between">
                 <button
@@ -441,27 +480,12 @@ export default function RequestAccess() {
                 <button
                   type="button"
                   onClick={next}
-                  disabled={!isValid || submitting || googleBusy || checkingEmail}
+                  disabled={!isValid || submitting}
                   className="border border-white/15 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.16em] text-white/62 transition-colors hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                 >
-                  {checkingEmail ? 'Checking' : submitting ? 'Sending' : isLast ? 'Submit application' : 'Continue'}
+                  {submitting ? 'Sending' : isLast ? 'Submit application' : 'Continue'}
                 </button>
               </div>
-
-              {isLast && !user && (
-                <div className="mt-8 flex items-center justify-end gap-4 border-t border-white/[0.07] pt-6">
-                  <span className="font-mono text-[9px] text-white/25">or</span>
-                  <button
-                    type="button"
-                    onClick={handleGoogleSignup}
-                    disabled={googleBusy || submitting}
-                    className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-                  >
-                    <GoogleIcon />
-                    {googleBusy ? 'Redirecting…' : 'Continue with Google'}
-                  </button>
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

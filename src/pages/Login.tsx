@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useEffect, useState, FormEvent } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -20,9 +20,20 @@ export default function Login() {
   const { user, profile, loading, signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mode, setMode] = useState<'password' | 'otp'>('password')
+  const [otpSent, setOtpSent] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = window.setInterval(() => {
+      setResendIn((seconds) => Math.max(0, seconds - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [resendIn])
 
   async function handleGoogle() {
     setError('')
@@ -63,6 +74,32 @@ export default function Login() {
     // Keeping submitting=true gives visual feedback until that redirect happens.
   }
 
+  async function sendOtp() {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail || submitting || resendIn > 0) return
+    setError('')
+    setSubmitting(true)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
+    })
+    setSubmitting(false)
+    setOtpSent(true)
+    setResendIn(60)
+
+    if (otpError) {
+      const limited = /rate|too many|security purposes/i.test(otpError.message)
+      setError(
+        limited
+          ? 'Too many sign-in requests. Wait a few minutes before trying again.'
+          : 'If this email is registered, a sign-in link has been sent.',
+      )
+    }
+  }
+
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-black py-16 text-white">
       <AstralisBackground />
@@ -79,7 +116,17 @@ export default function Login() {
           </Link>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-10">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (mode === 'password') {
+              void handleSubmit(event)
+            } else if (!otpSent) {
+              void sendOtp()
+            }
+          }}
+          className="space-y-10"
+        >
           <div className="space-y-7">
             <div className="space-y-2">
               <label className="font-mono text-[10px] tracking-widest uppercase text-white/55">Email</label>
@@ -94,30 +141,71 @@ export default function Login() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="font-mono text-[10px] tracking-widest uppercase text-white/55">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/32"
-              />
-            </div>
+            {mode === 'password' ? (
+              <div className="space-y-2">
+                <label className="font-mono text-[10px] tracking-widest uppercase text-white/55">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="w-full bg-transparent border-b border-white/15 text-white font-mono text-sm py-3 outline-none focus:border-white/45 transition-colors duration-500 placeholder-white/32"
+                />
+              </div>
+            ) : otpSent ? (
+              <p className="font-sans text-sm leading-6 text-white/48">
+                Check your inbox for a secure sign-in link.
+              </p>
+            ) : null}
           </div>
 
           {error && <p className="font-mono text-[10px] tracking-wider text-white/62">{error}</p>}
 
           <button
             type="submit"
-            disabled={submitting || googleBusy}
+            disabled={
+              submitting ||
+              googleBusy ||
+              !email.trim() ||
+              (mode === 'password' ? !password : otpSent)
+            }
             className="w-full border border-white/15 text-white/78 font-mono text-[10px] tracking-widest uppercase py-4 hover:border-white/40 hover:text-white/80 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Authenticating' : 'Enter'}
+            {submitting
+              ? 'Authenticating'
+              : mode === 'password'
+                ? 'Enter'
+                : otpSent
+                  ? 'Link sent'
+                  : 'Send sign-in link'}
           </button>
         </form>
+
+        <div className="mt-5 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.12em]">
+          <button
+            type="button"
+            onClick={() => {
+              setMode((current) => (current === 'password' ? 'otp' : 'password'))
+              setOtpSent(false)
+              setError('')
+            }}
+            className="text-white/42 transition-colors hover:text-white/75"
+          >
+            {mode === 'password' ? 'Use email code' : 'Use password'}
+          </button>
+          {mode === 'otp' && otpSent && (
+            <button
+              type="button"
+              onClick={() => void sendOtp()}
+              disabled={submitting || resendIn > 0}
+              className="text-white/42 transition-colors hover:text-white/75 disabled:text-white/20"
+            >
+              {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend link'}
+            </button>
+          )}
+        </div>
 
         <div className="mt-10 flex flex-col items-center gap-5">
           <span className="font-mono text-[10px] text-white/32 tracking-widest">or</span>

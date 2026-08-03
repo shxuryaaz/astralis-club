@@ -58,13 +58,30 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS access_requests (
   id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id    UUID        DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE SET NULL,
   name       TEXT        NOT NULL,
   email      TEXT        NOT NULL,
   reason     TEXT        NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE OR REPLACE FUNCTION public.email_has_account(candidate_email TEXT)
+ALTER TABLE access_requests ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'access_requests_user_id_fkey'
+      AND conrelid = 'access_requests'::regclass
+  ) THEN
+    ALTER TABLE access_requests
+      ADD CONSTRAINT access_requests_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_verified_applicant()
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -74,12 +91,13 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM auth.users
-    WHERE lower(email) = lower(trim(candidate_email))
+    WHERE id = auth.uid()
+      AND email_confirmed_at IS NOT NULL
   );
 $$;
 
-REVOKE ALL ON FUNCTION public.email_has_account(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.email_has_account(TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.is_verified_applicant() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_verified_applicant() TO authenticated;
 
 -- ────────────────────────────────────────────────────────────
 -- Security-definer helpers (avoids RLS recursion)
@@ -125,6 +143,10 @@ ALTER TABLE access_requests ENABLE ROW LEVEL SECURITY;
 
 CREATE UNIQUE INDEX IF NOT EXISTS access_requests_email_unique
   ON access_requests (lower(email));
+
+CREATE UNIQUE INDEX IF NOT EXISTS access_requests_user_id_unique
+  ON access_requests (user_id)
+  WHERE user_id IS NOT NULL;
 
 -- Drop existing policies before recreating (safe re-run)
 DROP POLICY IF EXISTS "profiles_select"               ON profiles;
@@ -172,10 +194,15 @@ CREATE POLICY "messages_insert"
 
 -- access_requests ────────────────────────────────────────────
 
--- Anyone (including anonymous) can submit a request
+-- Verified users can submit one request tied to their auth identity
 CREATE POLICY "access_requests_insert"
   ON access_requests FOR INSERT
-  WITH CHECK (true);
+  TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    AND is_verified_applicant()
+    AND lower(trim(email)) = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
+  );
 
 -- Only admins can read requests
 CREATE POLICY "access_requests_select_admin"
@@ -185,10 +212,8 @@ CREATE POLICY "access_requests_select_admin"
 -- Signed-in applicants can detect their own submitted request
 CREATE POLICY "access_requests_select_own"
   ON access_requests FOR SELECT
-  USING (
-    auth.uid() IS NOT NULL
-    AND lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
-  );
+  TO authenticated
+  USING (user_id = auth.uid());
 
 -- Only admins can dismiss (delete) requests
 CREATE POLICY "access_requests_delete_admin"
@@ -218,9 +243,19 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP TRIGGER IF EXISTS on_auth_user_verified ON auth.users;
+
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW
+  WHEN (NEW.email_confirmed_at IS NOT NULL)
+  EXECUTE FUNCTION handle_new_user();
+
+CREATE TRIGGER on_auth_user_verified
+  AFTER UPDATE OF email_confirmed_at ON auth.users
+  FOR EACH ROW
+  WHEN (OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL)
+  EXECUTE FUNCTION handle_new_user();
 
 -- ────────────────────────────────────────────────────────────
 -- Enable Realtime for the messages table (safe to re-run)
@@ -243,9 +278,9 @@ END $$;
 -- Notes
 -- ────────────────────────────────────────────────────────────
 -- 1. User flow:
---    a. User fills /request form (name, email, reason, password)
---    b. App calls supabase.auth.signUp() → trigger creates profile (approved=false)
---    c. Reason is stored in access_requests for admin context
+--    a. User verifies their email with OTP or signs in with Google
+--    b. The verified-user trigger creates a profile (approved=false)
+--    c. User completes /request and the request is tied to auth.uid()
 --    d. Admin goes to /admin → Requests tab → clicks Approve
 --    e. User can now sign in at /login
 --
@@ -254,7 +289,5 @@ END $$;
 --    or (role = admin alone is enough for app + RLS once is_approved() includes admins):
 --      UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 --
--- 3. IMPORTANT: Disable email confirmation in Supabase to avoid
---    users needing to confirm email before profile is usable:
---    Dashboard → Authentication → Email → Confirm email = OFF
---    (Optional but recommended for this approval-gated flow)
+-- 3. Email ownership is verified through the OTP flow before an application
+--    can be inserted. Keep email authentication and OTP delivery enabled.

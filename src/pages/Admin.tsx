@@ -3,8 +3,6 @@ import { supabase } from '../lib/supabase'
 import { capturePostHog } from '../lib/posthog'
 import type { Hackathon, UserProfile, AccessRequest } from '../types'
 
-type QueueRequest = AccessRequest & { accountOnly?: boolean }
-
 type HackathonForm = {
   title: string
   date: string
@@ -28,7 +26,7 @@ const labelClass = 'font-mono text-[10px] tracking-widest uppercase text-white/5
 export default function Admin() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
-  const [requests, setRequests] = useState<QueueRequest[]>([])
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [form, setForm] = useState<HackathonForm>(emptyForm)
   const [editing, setEditing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
@@ -39,15 +37,19 @@ export default function Admin() {
 
   const normEmail = (e: string) => e.trim().toLowerCase()
 
-  function profileForRequestEmail(email: string) {
-    const n = normEmail(email)
-    return users.find((u) => normEmail(u.email) === n)
+  function profileForRequest(request: AccessRequest) {
+    if (request.user_id) {
+      const byId = users.find((user) => user.id === request.user_id)
+      if (byId) return byId
+    }
+    const normalizedEmail = normEmail(request.email)
+    return users.find((user) => normEmail(user.email) === normalizedEmail)
   }
 
   type RequestLinkStatus = 'no_profile' | 'pending' | 'approved'
 
-  function requestLinkStatus(req: QueueRequest): RequestLinkStatus {
-    const p = profileForRequestEmail(req.email)
+  function requestLinkStatus(req: AccessRequest): RequestLinkStatus {
+    const p = profileForRequest(req)
     if (!p) return 'no_profile'
     if (p.approved) return 'approved'
     return 'pending'
@@ -70,26 +72,9 @@ export default function Admin() {
     if (userRes.data && reqRes.data) {
       const nextUsers = userRes.data as UserProfile[]
       const savedRequests = reqRes.data as AccessRequest[]
-      const requestedEmails = new Set(savedRequests.map((request) => normEmail(request.email)))
-      const accountOnlyRequests: QueueRequest[] = nextUsers
-        .filter(
-          (profile) =>
-            profile.role === 'member' &&
-            !profile.approved &&
-            !requestedEmails.has(normEmail(profile.email)),
-        )
-        .map((profile) => ({
-          id: `profile:${profile.id}`,
-          name: profile.name,
-          email: profile.email,
-          reason: 'Account created directly without submitting the request form.',
-          created_at: profile.created_at,
-          accountOnly: true,
-        }))
-
       setUsers(nextUsers)
       setRequests(
-        [...savedRequests, ...accountOnlyRequests].sort(
+        savedRequests.sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         ),
       )
@@ -136,10 +121,10 @@ export default function Admin() {
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
 
-  async function approveRequest(req: QueueRequest) {
+  async function approveRequest(req: AccessRequest) {
     setRowError(null)
     setBusyRequestId(req.id)
-    const match = profileForRequestEmail(req.email)
+    const match = profileForRequest(req)
     const q = match
       ? supabase.from('profiles').update({ approved: true }).eq('id', match.id).select('id')
       : supabase
@@ -166,18 +151,16 @@ export default function Admin() {
     }
 
     setUsers((prev) =>
-      prev.map((u) => (normEmail(u.email) === normEmail(req.email) ? { ...u, approved: true } : u))
+      prev.map((u) => (u.id === match?.id ? { ...u, approved: true } : u))
     )
-    if (!req.accountOnly) {
-      await supabase.from('access_requests').delete().eq('id', req.id)
-    }
+    await supabase.from('access_requests').delete().eq('id', req.id)
     setRequests((prev) => prev.filter((r) => r.id !== req.id))
     await fetchAll()
     void capturePostHog('access_request_approved')
     setBusyRequestId(null)
   }
 
-  async function dismissRequest(req: QueueRequest) {
+  async function dismissRequest(req: AccessRequest) {
     setRowError(null)
     setBusyRequestId(req.id)
     const { error } = await supabase.from('access_requests').delete().eq('id', req.id)
@@ -392,13 +375,11 @@ export default function Admin() {
                           <p className="font-sans text-sm text-white/75 mb-1">{req.name}</p>
                           <p className="font-mono text-[10px] tracking-wider text-white/48 mb-2">{req.email}</p>
                           <p className="font-mono text-[10px] tracking-wider uppercase mb-2 text-white/48">
-                            {req.accountOnly
-                              ? 'Pending account · application required'
-                              : link === 'no_profile'
-                                ? 'No member profile for this email'
-                                : link === 'pending'
-                                  ? 'Linked · access not approved yet'
-                                  : 'Already approved in Members — dismiss to remove from queue'}
+                            {link === 'no_profile'
+                              ? 'Legacy request · no verified member profile'
+                              : link === 'pending'
+                                ? 'Verified · access not approved yet'
+                                : 'Already approved in Members — dismiss to remove from queue'}
                           </p>
                           <p className="max-w-md whitespace-pre-wrap font-sans text-xs leading-relaxed text-white/68">
                             {req.reason}
@@ -413,7 +394,7 @@ export default function Admin() {
                           )}
                         </div>
                         <div className="flex flex-shrink-0 justify-end gap-5 pt-1">
-                          {link === 'pending' && !req.accountOnly && (
+                          {link === 'pending' && (
                             <button
                               type="button"
                               disabled={busy}
@@ -423,16 +404,14 @@ export default function Admin() {
                               {busy && busyRequestId === req.id ? '…' : 'Approve'}
                             </button>
                           )}
-                          {!req.accountOnly && (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => dismissRequest(req)}
-                              className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
-                            >
-                              Dismiss
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => dismissRequest(req)}
+                            className="font-mono text-[10px] tracking-widest uppercase text-white/32 hover:text-white/68 transition-colors duration-500 disabled:opacity-25 disabled:pointer-events-none"
+                          >
+                            Dismiss
+                          </button>
                         </div>
                       </div>
                     </div>
