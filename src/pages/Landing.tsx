@@ -9,17 +9,17 @@ const pillars = [
   {
     index: '01',
     title: 'Hackathons',
-    body: 'We form teams before the brief drops and enter expecting to place. When a team clicks, it keeps building after the event ends.',
+    body: 'We form teams early, prepare properly, and enter to place.',
   },
   {
     index: '02',
     title: 'Placements',
-    body: 'The right opening helps. So does a hard mock interview, or an introduction from someone who has actually seen your work.',
+    body: 'We run hard mocks and make introductions based on real work.',
   },
   {
     index: '03',
     title: 'Whatever comes next',
-    body: 'New competitions, new companies, new roles. If something is worth chasing, someone here is already on it.',
+    body: 'If it is worth chasing, someone here is already on it.',
   },
 ]
 
@@ -112,10 +112,17 @@ export default function Landing() {
             {user ? 'Enter Astralis' : 'Request Access'}
           </Link>
         </div>
+        <a
+          href="#what-we-are"
+          aria-label="Continue to what we are"
+          className="absolute bottom-6 left-1/2 flex h-11 w-11 -translate-x-1/2 items-center justify-center focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/60 sm:bottom-9 sm:h-10 sm:w-10"
+        >
+          <span className="block h-3 w-3 rotate-45 border-b border-r border-white/45" />
+        </a>
       </section>
 
       <div className="relative z-20 border-t border-white/10 bg-black/90">
-        <section className="mx-auto max-w-6xl px-4 sm:px-8">
+        <section id="what-we-are" className="scroll-mt-16 mx-auto max-w-6xl px-4 sm:px-8">
           <div className="py-16">
             <p className="mb-10 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
             02 // What We Are
@@ -124,8 +131,8 @@ export default function Landing() {
               <h2 className="font-sans text-[clamp(2.15rem,5vw,4.5rem)] font-light leading-[1.03] tracking-[-0.03em] text-white/90">
                 You don't join Astralis.<br />You qualify.
               </h2>
-              <p className="max-w-xl self-end font-sans text-[15px] leading-7 text-white/72 sm:text-base">
-                Astralis only takes people who have already won something. A hackathon podium, a case competition, a national round. Once you're in, the work is simple: we enter together, prepare properly, and get each other hired.
+              <p className="max-w-xl self-end font-sans text-[17px] leading-8 text-white/72 sm:text-lg">
+                Come with proof. Once you're in, we team up for hackathons, prepare for the right roles, and help each other get hired.
               </p>
             </div>
           </div>
@@ -137,14 +144,14 @@ export default function Landing() {
                 className="grid grid-cols-[2rem_6.75rem_1fr] gap-2 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4rem_12rem_1fr] sm:gap-4 sm:px-3"
               >
                 <span className="font-mono text-[9px] text-white/50 sm:text-[11px]">{pillar.index} /</span>
-                <h3 className="font-sans text-xs text-white/85 sm:text-base">{pillar.title}</h3>
-                <p className="font-sans text-[11px] leading-5 text-white/65 sm:text-[15px] sm:leading-6">{pillar.body}</p>
+                <h3 className="font-sans text-sm text-white/85 sm:text-lg">{pillar.title}</h3>
+                <p className="font-sans text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{pillar.body}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="border-b border-white/10">
+        <section id="mentors" className="scroll-mt-16 border-b border-white/10">
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
             <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
               03 // Mentors
