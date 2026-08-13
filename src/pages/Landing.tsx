@@ -13,13 +13,40 @@ const pillars = [
   },
   {
     index: '02',
-    title: 'Placements',
-    body: 'We run hard mocks and make introductions based on real work.',
+    title: 'Introductions',
+    body: 'We help each other meet the right people at the right time.',
   },
   {
     index: '03',
-    title: 'Whatever comes next',
-    body: 'If it is worth chasing, someone here is already on it.',
+    title: 'The Room',
+    body: 'We speak where it counts and run our own nights.',
+  },
+]
+
+const roomEvents = [
+  {
+    index: '01',
+    title: 'AMAs',
+    body: 'Our mentors, unfiltered. Goldman Sachs, D.E. Shaw, PayU.',
+  },
+  {
+    index: '02',
+    title: 'Build Nights',
+    body: 'Turn up with nothing. Leave with something shipped.',
+  },
+  {
+    index: '03',
+    title: 'The Table',
+    body: 'Small rooms. No badges, no networking scripts.',
+  },
+]
+
+const roomMoments = [
+  {
+    image: '/anthropic-claude-code-delhi.png',
+    alt: 'Astralis speaking at the Anthropic Claude Code event in Delhi',
+    label: '12 July 2026 // Anthropic Claude Code Event, Delhi',
+    headline: 'Spoke on one engineer, one startup, zero bottlenecks. Live agentic build, in front of a room of senior engineers.',
   },
 ]
 
@@ -40,11 +67,13 @@ const featuredWins = [
 
 export default function Landing() {
   const [activeWin, setActiveWin] = useState(0)
+  const [activeRoom, setActiveRoom] = useState(0)
   const { user, profile } = useAuth()
   const reducedMotion = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const letterSpacing = useTransform(scrollYProgress, [0, 0.2], ['0.2em', '0.13em'])
   const featuredWin = featuredWins[activeWin]
+  const roomMoment = roomMoments[activeRoom]
   const memberName = profile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Member'
   const memberInitials = memberName
     .split(/\s+/)
@@ -122,43 +151,70 @@ export default function Landing() {
       </section>
 
       <div className="relative z-20 border-t border-white/10 bg-black/90">
-        <section id="what-we-are" className="scroll-mt-16 mx-auto max-w-6xl px-4 sm:px-8">
-          <div className="py-16">
-            <p className="mb-10 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
-            02 // What We Are
-            </p>
-            <div className="grid gap-8 md:grid-cols-2 md:gap-16">
+        <section id="what-we-are" className="scroll-mt-16 border-b border-white/10">
+          <div className="mx-auto max-w-6xl px-4 py-24 sm:px-8 sm:py-32">
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="border-b border-white/15 pb-6 font-mono text-xs uppercase tracking-[0.4em] text-white/75 sm:text-sm"
+            >
+              02 // What We Are
+            </motion.p>
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.32, delay: 0.06, ease: 'easeOut' }}
+              className="grid gap-8 pt-16 sm:pt-20 md:grid-cols-2 md:gap-16"
+            >
               <h2 className="font-sans text-[clamp(2.15rem,5vw,4.5rem)] font-light leading-[1.03] tracking-[-0.03em] text-white/90">
                 You don't join Astralis.<br />You qualify.
               </h2>
               <p className="max-w-xl self-end font-sans text-[17px] leading-8 text-white/72 sm:text-lg">
-                Come with proof. Once you're in, we team up for hackathons, prepare for the right roles, and help each other get hired.
+                Astralis is a community of people who Dominate. Founders, builders, competitors. We ship stuff, we back each other, and we run nights where only the best show up. Come with proof.
               </p>
+            </motion.div>
+            <div className="mt-16 border-t border-white/10 sm:mt-20">
+              {pillars.map((pillar, index) => (
+                <motion.div
+                  key={pillar.index}
+                  initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.25, delay: index * 0.04, ease: 'easeOut' }}
+                  className="grid grid-cols-[2rem_6.75rem_1fr] gap-2 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4rem_12rem_1fr] sm:gap-4 sm:px-3"
+                >
+                  <span className="font-mono text-[9px] text-white/50 sm:text-[11px]">{pillar.index} /</span>
+                  <h3 className="font-sans text-sm text-white/85 sm:text-lg">{pillar.title}</h3>
+                  <p className="font-sans text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{pillar.body}</p>
+                </motion.div>
+              ))}
             </div>
-          </div>
-
-          <div className="border-t border-white/10">
-            {pillars.map((pillar) => (
-              <div
-                key={pillar.index}
-                className="grid grid-cols-[2rem_6.75rem_1fr] gap-2 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4rem_12rem_1fr] sm:gap-4 sm:px-3"
-              >
-                <span className="font-mono text-[9px] text-white/50 sm:text-[11px]">{pillar.index} /</span>
-                <h3 className="font-sans text-sm text-white/85 sm:text-lg">{pillar.title}</h3>
-                <p className="font-sans text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{pillar.body}</p>
-              </div>
-            ))}
           </div>
         </section>
 
         <section id="mentors" className="scroll-mt-16 border-b border-white/10">
-          <div className="mx-auto max-w-6xl px-4 sm:px-8">
-            <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
+          <div className="mx-auto max-w-6xl px-4 py-24 sm:px-8 sm:py-32">
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="border-b border-white/15 pb-6 font-mono text-xs uppercase tracking-[0.4em] text-white/75 sm:text-sm"
+            >
               03 // Mentors
-            </p>
-            <div className="grid gap-6 border-t border-white/10 py-8 md:grid-cols-[1fr_auto] md:items-center md:gap-16">
+            </motion.p>
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.32, delay: 0.06, ease: 'easeOut' }}
+              className="grid gap-10 pt-16 sm:pt-20 md:grid-cols-[1fr_auto] md:items-center md:gap-16"
+            >
               <div>
-                <h2 className="max-w-2xl font-sans text-3xl font-light leading-tight text-white/90 sm:text-5xl">
+                <h2 className="max-w-2xl font-sans text-[clamp(2rem,4vw,3.5rem)] font-light leading-[1.08] tracking-[-0.025em] text-white/90">
                   We are mentored by individuals who work at
                 </h2>
               </div>
@@ -186,17 +242,133 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
 
         <section className="border-b border-white/10">
+          <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-8 sm:pb-20 sm:pt-32">
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="border-b border-white/15 pb-6 font-mono text-xs uppercase tracking-[0.4em] text-white/75 sm:text-sm"
+            >
+              04 // Rooms
+            </motion.p>
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.32, delay: 0.06, ease: 'easeOut' }}
+              className="grid gap-8 pt-16 sm:pt-20 md:grid-cols-2 md:gap-16"
+            >
+              <h2 className="font-sans text-[clamp(2rem,4vw,3.5rem)] font-light leading-[1.08] tracking-[-0.025em] text-white/90">
+                We get called into rooms that matter<br />and we run our own.
+              </h2>
+              <p className="max-w-xl self-end font-sans text-[17px] leading-8 text-white/72 sm:text-lg">
+                AMAs, build nights, sessions where people who've actually shipped do the talking. Anyone can show up. Not everyone gets to stay.
+              </p>
+            </motion.div>
+          </div>
+
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
-            <p className="py-16 font-mono text-xs uppercase tracking-[0.3em] text-white/60 sm:text-sm">
-              04 // Wins
-            </p>
-            <figure
-              className="relative mx-auto mb-8 max-w-full overflow-hidden border border-white/10 bg-black"
+            <motion.figure
+              initial={reducedMotion ? false : { opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="relative border border-white/10 bg-black"
+            >
+              <div className="relative aspect-video overflow-hidden">
+                <motion.img
+                  key={roomMoment.image}
+                  src={roomMoment.image}
+                  alt={roomMoment.alt}
+                  initial={reducedMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.35 }}
+                  className="block h-full w-full object-cover object-center grayscale brightness-75 contrast-75"
+                />
+                <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
+                  <button
+                    type="button"
+                    aria-label="Previous room"
+                    onClick={() => setActiveRoom((activeRoom - 1 + roomMoments.length) % roomMoments.length)}
+                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                  >
+                    ←
+                  </button>
+                  <span className="border-x border-white/15 px-4 py-3">
+                    {String(activeRoom + 1).padStart(2, '0')} / {String(roomMoments.length).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Next room"
+                    onClick={() => setActiveRoom((activeRoom + 1) % roomMoments.length)}
+                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+              <figcaption aria-live="polite" className="border-t border-white/15 bg-black/95 px-5 py-5 sm:px-8 sm:py-7">
+                <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
+                  {roomMoment.label}
+                </p>
+                <h3 className="max-w-4xl font-sans text-xl font-light leading-tight text-white sm:text-2xl">
+                  {roomMoment.headline}
+                </h3>
+              </figcaption>
+            </motion.figure>
+          </div>
+
+          <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-8 sm:pb-32">
+            <div className="mt-12 border-t border-white/10">
+              <p className="py-8 font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 sm:text-xs">
+                What We Run
+              </p>
+              <div className="border-t border-white/10">
+                {roomEvents.map((event, index) => (
+                  <motion.div
+                    key={event.index}
+                    initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.25, delay: index * 0.04, ease: 'easeOut' }}
+                    className="grid grid-cols-[2rem_6.75rem_1fr] gap-2 border-b border-white/10 py-6 transition-colors hover:bg-white/[0.03] sm:grid-cols-[4rem_12rem_1fr] sm:gap-4 sm:px-3"
+                  >
+                    <span className="font-mono text-[9px] text-white/50 sm:text-[11px]">{event.index} /</span>
+                    <h3 className="font-sans text-sm text-white/85 sm:text-lg">{event.title}</h3>
+                    <p className="font-sans text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{event.body}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <section className="border-b border-white/10 pb-24 sm:pb-32">
+          <div className="mx-auto max-w-6xl px-4 pt-24 sm:px-8 sm:pt-32">
+            <motion.p
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="border-b border-white/15 pb-6 font-mono text-xs uppercase tracking-[0.4em] text-white/75 sm:text-sm"
+            >
+              05 // Wins
+            </motion.p>
+          </div>
+          <div className="mx-auto max-w-6xl px-4 sm:px-8">
+            <motion.figure
+              initial={reducedMotion ? false : { opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="relative mx-auto mt-16 max-w-full overflow-hidden border border-white/10 bg-black sm:mt-20"
               style={{
                 aspectRatio: '4 / 3',
                 width: 'min(100%, 106.667dvh)',
@@ -240,12 +412,20 @@ export default function Landing() {
                   →
                 </button>
               </div>
-            </figure>
+            </motion.figure>
           </div>
         </section>
 
-        <footer className="border-t border-white/10 px-4 py-7 text-center font-mono text-[9px] uppercase tracking-widest text-white/45 sm:text-[10px]">
-          Astralis © 2026
+        <footer className="flex items-center justify-center gap-5 border-t border-white/10 px-4 py-7 text-center font-mono text-[9px] uppercase tracking-widest text-white/45 sm:text-[10px]">
+          <span>Astralis © 2026</span>
+          <a
+            href="https://www.linkedin.com/company/astralisclub"
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-white"
+          >
+            LinkedIn
+          </a>
         </footer>
       </div>
     </main>

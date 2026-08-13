@@ -19,8 +19,8 @@ function GoogleIcon() {
 }
 
 type Values = {
-  wins: string
-  shipped: string
+  links: string
+  proof: string
   building: string
   contribution: string
 }
@@ -39,21 +39,20 @@ type Step = {
 
 const steps: Step[] = [
   {
-    field: 'wins',
-    label: 'Proof',
-    question: 'What have you won?',
-    hint: "A hackathon podium, a case comp, a national round. 'Nothing yet' is an acceptable answer, but the next two better be good.",
-    placeholder: 'What you won, where you placed, and who you beat.',
+    field: 'links',
+    label: 'Links',
+    question: 'Links. LinkedIn, GitHub, portfolio, whatever shows your work.',
+    hint: 'One per line. Put the strongest link first.',
+    placeholder: 'https://…',
     type: 'textarea',
   },
   {
-    field: 'shipped',
-    label: 'Work',
-    question: 'What have you shipped?',
-    hint: "One link. The thing you're proudest of. One line on why.",
-    placeholder: 'https://… — one line on why it matters.',
-    type: 'text',
-    maxLength: 250,
+    field: 'proof',
+    label: 'Proof',
+    question: 'Show us your best proof. Won, raised, built, whatever it is.',
+    hint: 'Give us the strongest thing you have done and enough context to judge it.',
+    placeholder: 'The strongest proof you have.',
+    type: 'textarea',
   },
   {
     field: 'building',
@@ -71,8 +70,8 @@ export default function RequestAccess() {
   const { user, profile, loading } = useAuth()
   const [current, setCurrent] = useState(0)
   const [values, setValues] = useState<Values>({
-    wins: '',
-    shipped: '',
+    links: '',
+    proof: '',
     building: '',
     contribution: '',
   })
@@ -92,8 +91,8 @@ export default function RequestAccess() {
   const value = values[step.field]
   const isLast = current === steps.length - 1
   const isValid =
-    step.field === 'shipped'
-      ? /^(https?:\/\/\S+)\s+.+$/i.test(values.shipped.trim())
+    step.field === 'links'
+      ? /https?:\/\/\S+/i.test(values.links.trim())
       : value.trim().length > 0
 
   useEffect(() => {
@@ -136,8 +135,8 @@ export default function RequestAccess() {
 
   function applicationReason() {
     return [
-      `WINS\n${values.wins.trim()}`,
-      `SHIPPED\n${values.shipped.trim()}`,
+      `LINKS\n${values.links.trim()}`,
+      `BEST PROOF\n${values.proof.trim()}`,
       `BUILDING NOW\n${values.building.trim()}`,
       `CONTRIBUTION\n${values.contribution.trim()}`,
     ].join('\n\n')
@@ -460,9 +459,9 @@ export default function RequestAccess() {
                 </p>
               )}
 
-              {step.field === 'shipped' && values.shipped.trim() && !isValid && (
+              {step.field === 'links' && values.links.trim() && !isValid && (
                 <p className="mt-3 font-mono text-[9px] leading-5 text-white/40">
-                  Start with an http:// or https:// link, then add one line on why.
+                  Add at least one full http:// or https:// link.
                 </p>
               )}
 
