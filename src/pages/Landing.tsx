@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import AstralisBackground from '../components/AstralisBackground'
@@ -41,23 +41,30 @@ const roomEvents = [
   },
 ]
 
-const roomMoments = [
+const proofMoments = [
   {
+    type: 'Room',
     image: '/anthropic-claude-code-delhi.png',
     alt: 'Astralis speaking at the Anthropic Claude Code event in Delhi',
     label: '12 July 2026 // Anthropic Claude Code Event, Delhi',
     headline: 'Spoke on one engineer, one startup, zero bottlenecks. Live agentic build, in front of a room of senior engineers.',
   },
-]
-
-const featuredWins = [
   {
+    type: 'Room',
+    image: '/founder-investor-meetup-hilton-works.png',
+    alt: 'An Astralis member hosting a founder and investor meetup at Hilton Works',
+    label: 'Founder × Investor Meetup, Hilton Works',
+    headline: 'An Astralis member built the room in seven days. 50+ founders and investors showed up.',
+  },
+  {
+    type: 'Win',
     image: '/hackbmu-8-team-noir.png',
     alt: 'Team Noir receiving third place certificates at HackBMU 8.0',
     label: '18–19 April 2026 // HackBMU 8.0',
     headline: 'Team Noir takes third among 100+ teams.',
   },
   {
+    type: 'Win',
     image: '/orbix-team-monarch.png',
     alt: 'Team Monarch holding the ORBIX winners trophy at IIIT Delhi',
     label: '25–26 March 2026 // ORBIX',
@@ -66,14 +73,12 @@ const featuredWins = [
 ]
 
 export default function Landing() {
-  const [activeWin, setActiveWin] = useState(0)
-  const [activeRoom, setActiveRoom] = useState(0)
+  const [activeProof, setActiveProof] = useState(0)
   const { user, profile } = useAuth()
   const reducedMotion = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const letterSpacing = useTransform(scrollYProgress, [0, 0.2], ['0.2em', '0.13em'])
-  const featuredWin = featuredWins[activeWin]
-  const roomMoment = roomMoments[activeRoom]
+  const proofMoment = proofMoments[activeProof]
   const memberName = profile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Member'
   const memberInitials = memberName
     .split(/\s+/)
@@ -81,15 +86,6 @@ export default function Landing() {
     .map((part: string) => part[0])
     .join('')
     .toUpperCase()
-
-  useEffect(() => {
-    if (reducedMotion) return
-    const timer = window.setInterval(
-      () => setActiveWin((current) => (current + 1) % featuredWins.length),
-      6000,
-    )
-    return () => window.clearInterval(timer)
-  }, [reducedMotion])
 
   return (
     <main className="relative w-full overflow-x-hidden bg-black text-white selection:bg-white selection:text-black">
@@ -132,7 +128,7 @@ export default function Landing() {
             <span>Stralis</span>
           </motion.h1>
           <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/60 sm:text-xs sm:tracking-[0.35em]">
-            Not a club. A cartel.
+            Not a community. A cartel.
           </p>
           <Link
             to={user ? '/dashboard' : '/request'}
@@ -211,20 +207,22 @@ export default function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.32, delay: 0.06, ease: 'easeOut' }}
-              className="grid gap-10 pt-16 sm:pt-20 md:grid-cols-[1fr_auto] md:items-center md:gap-16"
+              className="grid gap-10 pt-16 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(30rem,34rem)] lg:items-center lg:gap-16"
             >
               <div>
                 <h2 className="max-w-2xl font-sans text-[clamp(2rem,4vw,3.5rem)] font-light leading-[1.08] tracking-[-0.025em] text-white/90">
                   We are mentored by individuals who work at
                 </h2>
               </div>
-              <div className="min-w-0 border-t border-white/10 py-8 md:w-80 md:border-l md:border-t-0 md:py-0 md:pl-10">
-                <div className="flex min-w-0 flex-col items-start gap-10 text-[#c8c8c8] md:items-end md:gap-6">
-                  <div className="w-fit text-left font-playfair text-[1.75rem] font-bold leading-[1.05] tracking-[-0.5px] md:w-full md:text-right md:text-[clamp(2rem,5vw,2.5rem)]">
-                    <span className="block">Goldman</span>
-                    <span className="block">Sachs</span>
+              <div className="min-w-0 border-t border-white/10 pt-10 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+                <div className="grid min-w-0 grid-cols-1 text-[#c8c8c8] sm:grid-cols-2">
+                  <div className="flex h-32 items-center justify-center px-6 py-6 sm:h-40">
+                    <div className="text-center font-playfair text-[1.75rem] font-bold leading-[1.05] tracking-[-0.5px] md:text-[clamp(2rem,5vw,2.5rem)]">
+                      <span className="block">Goldman</span>
+                      <span className="block">Sachs</span>
+                    </div>
                   </div>
-                  <div className="mr-auto text-left md:mr-0 md:ml-auto md:text-right">
+                  <div className="flex h-32 items-center justify-center px-6 py-6 sm:h-40">
                     <div className="inline-block">
                       <div aria-hidden="true" className="mb-2 grid h-4 w-full grid-cols-[63%_14%_3%_20%] items-end md:mb-1">
                         <span className="h-px bg-[#c8c8c8]/60" />
@@ -237,8 +235,28 @@ export default function Landing() {
                       </span>
                     </div>
                   </div>
-                  <div className="w-fit text-left font-poppins text-[1.8rem] font-semibold leading-none md:w-full md:text-right md:text-[clamp(2.125rem,5.25vw,2.5rem)]">
-                    payu
+                  <div className="flex h-32 items-center justify-center px-6 py-6 sm:h-40">
+                    <div className="font-poppins text-[1.8rem] font-semibold leading-none md:text-[clamp(2.125rem,5.25vw,2.5rem)]">
+                      payu
+                    </div>
+                  </div>
+                  <div className="flex h-32 items-center justify-center px-6 py-6 sm:h-40">
+                    <div
+                      role="img"
+                      aria-label="MakeMyTrip"
+                      className="flex w-fit items-center gap-0 whitespace-nowrap font-poppins text-[1.55rem] font-semibold leading-none text-[#c8c8c8] md:text-[clamp(1.875rem,4.5vw,2.25rem)]"
+                    >
+                      <span aria-hidden="true">make</span>
+                      <span
+                        aria-hidden="true"
+                        className="flex h-[1.25em] w-[1.25em] shrink-0 items-center justify-center rounded-[22%] bg-[#c8c8c8] text-[#1b1b1b]"
+                      >
+                        <span className="translate-y-[0.08em] -rotate-2 font-kalam text-[1.08em] font-bold leading-none">
+                          my
+                        </span>
+                      </span>
+                      <span aria-hidden="true">trip</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -273,59 +291,8 @@ export default function Landing() {
             </motion.div>
           </div>
 
-          <div className="mx-auto max-w-6xl px-4 sm:px-8">
-            <motion.figure
-              initial={reducedMotion ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="relative border border-white/10 bg-black"
-            >
-              <div className="relative aspect-video overflow-hidden">
-                <motion.img
-                  key={roomMoment.image}
-                  src={roomMoment.image}
-                  alt={roomMoment.alt}
-                  initial={reducedMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.35 }}
-                  className="block h-full w-full object-cover object-center grayscale brightness-75 contrast-75"
-                />
-                <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
-                  <button
-                    type="button"
-                    aria-label="Previous room"
-                    onClick={() => setActiveRoom((activeRoom - 1 + roomMoments.length) % roomMoments.length)}
-                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
-                  >
-                    ←
-                  </button>
-                  <span className="border-x border-white/15 px-4 py-3">
-                    {String(activeRoom + 1).padStart(2, '0')} / {String(roomMoments.length).padStart(2, '0')}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Next room"
-                    onClick={() => setActiveRoom((activeRoom + 1) % roomMoments.length)}
-                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
-                  >
-                    →
-                  </button>
-                </div>
-              </div>
-              <figcaption aria-live="polite" className="border-t border-white/15 bg-black/95 px-5 py-5 sm:px-8 sm:py-7">
-                <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
-                  {roomMoment.label}
-                </p>
-                <h3 className="max-w-4xl font-sans text-xl font-light leading-tight text-white sm:text-2xl">
-                  {roomMoment.headline}
-                </h3>
-              </figcaption>
-            </motion.figure>
-          </div>
-
           <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-8 sm:pb-32">
-            <div className="mt-12 border-t border-white/10">
+            <div className="border-t border-white/10">
               <p className="py-8 font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 sm:text-xs">
                 What We Run
               </p>
@@ -359,25 +326,47 @@ export default function Landing() {
               transition={{ duration: 0.25, ease: 'easeOut' }}
               className="border-b border-white/15 pb-6 font-mono text-xs uppercase tracking-[0.4em] text-white/75 sm:text-sm"
             >
-              05 // Wins
+              05 // Proof
             </motion.p>
           </div>
           <div className="mx-auto max-w-6xl px-4 sm:px-8">
             <motion.figure
+              tabIndex={0}
+              aria-label="Astralis proof gallery"
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft') {
+                  setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)
+                }
+                if (event.key === 'ArrowRight') {
+                  setActiveProof((activeProof + 1) % proofMoments.length)
+                }
+              }}
               initial={reducedMotion ? false : { opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="relative mx-auto mt-16 max-w-full overflow-hidden border border-white/10 bg-black sm:mt-20"
+              className="relative mx-auto mt-16 max-w-full overflow-hidden border border-white/10 bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/60 sm:mt-20"
               style={{
                 aspectRatio: '4 / 3',
                 width: 'min(100%, 106.667dvh)',
               }}
             >
               <motion.img
-                key={featuredWin.image}
-                src={featuredWin.image}
-                alt={featuredWin.alt}
+                key={proofMoment.image}
+                src={proofMoment.image}
+                alt={proofMoment.alt}
+                draggable={false}
+                drag={reducedMotion ? false : 'x'}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.08}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -50) {
+                    setActiveProof((activeProof + 1) % proofMoments.length)
+                  }
+                  if (info.offset.x > 50) {
+                    setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)
+                  }
+                }}
                 initial={reducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.35 }}
@@ -385,28 +374,28 @@ export default function Landing() {
               />
               <figcaption aria-live="polite" className="absolute bottom-0 left-0 w-full border-r border-t border-white/15 bg-black/95 px-5 py-5 sm:max-w-[58%] sm:px-8 sm:py-7">
                 <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
-                  {featuredWin.label}
+                  {proofMoment.type} / {proofMoment.label}
                 </p>
                 <h3 className="font-sans text-xl font-light leading-tight text-white sm:text-2xl">
-                  {featuredWin.headline}
+                  {proofMoment.headline}
                 </h3>
               </figcaption>
               <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
                 <button
                   type="button"
-                  aria-label="Previous win"
-                  onClick={() => setActiveWin((activeWin - 1 + featuredWins.length) % featuredWins.length)}
+                  aria-label="Previous proof"
+                  onClick={() => setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)}
                   className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
                 >
                   ←
                 </button>
                 <span className="border-x border-white/15 px-4 py-3">
-                  {String(activeWin + 1).padStart(2, '0')} / {String(featuredWins.length).padStart(2, '0')}
+                  {String(activeProof + 1).padStart(2, '0')} / {String(proofMoments.length).padStart(2, '0')}
                 </span>
                 <button
                   type="button"
-                  aria-label="Next win"
-                  onClick={() => setActiveWin((activeWin + 1) % featuredWins.length)}
+                  aria-label="Next proof"
+                  onClick={() => setActiveProof((activeProof + 1) % proofMoments.length)}
                   className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
                 >
                   →
