@@ -332,32 +332,54 @@ export default function Landing() {
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className="relative mx-auto mt-16 max-w-full overflow-hidden border border-white/10 bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/60 sm:mt-20"
               style={{
-                aspectRatio: '4 / 3',
                 width: 'min(100%, 106.667dvh)',
               }}
             >
-              <motion.img
-                key={proofMoment.image}
-                src={proofMoment.image}
-                alt={proofMoment.alt}
-                draggable={false}
-                drag={reducedMotion ? false : 'x'}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.08}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -50) {
-                    setActiveProof((activeProof + 1) % proofMoments.length)
-                  }
-                  if (info.offset.x > 50) {
-                    setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)
-                  }
-                }}
-                initial={reducedMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.35 }}
-                className="block h-full w-full object-contain object-center grayscale brightness-110 contrast-110"
-              />
-              <figcaption aria-live="polite" className="absolute bottom-0 left-0 w-full border-r border-t border-white/15 bg-black/95 px-5 py-5 sm:max-w-[58%] sm:px-8 sm:py-7">
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <motion.img
+                  key={proofMoment.image}
+                  src={proofMoment.image}
+                  alt={proofMoment.alt}
+                  draggable={false}
+                  drag={reducedMotion ? false : 'x'}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.08}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.x < -50) {
+                      setActiveProof((activeProof + 1) % proofMoments.length)
+                    }
+                    if (info.offset.x > 50) {
+                      setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)
+                    }
+                  }}
+                  initial={reducedMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.35 }}
+                  className="block h-full w-full object-contain object-center grayscale brightness-110 contrast-110"
+                />
+                <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
+                  <button
+                    type="button"
+                    aria-label="Previous proof"
+                    onClick={() => setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)}
+                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                  >
+                    ←
+                  </button>
+                  <span className="border-x border-white/15 px-4 py-3">
+                    {String(activeProof + 1).padStart(2, '0')} / {String(proofMoments.length).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Next proof"
+                    onClick={() => setActiveProof((activeProof + 1) % proofMoments.length)}
+                    className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+              <figcaption aria-live="polite" className="border-t border-white/15 bg-black/95 px-5 py-5 sm:absolute sm:bottom-0 sm:left-0 sm:w-full sm:max-w-[58%] sm:border-r sm:px-8 sm:py-7">
                 <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:text-[10px]">
                   {proofMoment.type} / {proofMoment.label}
                 </p>
@@ -365,27 +387,6 @@ export default function Landing() {
                   {proofMoment.headline}
                 </h3>
               </figcaption>
-              <div className="absolute right-0 top-0 flex items-center border-b border-l border-white/15 bg-black/95 font-mono text-[9px] text-white/65">
-                <button
-                  type="button"
-                  aria-label="Previous proof"
-                  onClick={() => setActiveProof((activeProof - 1 + proofMoments.length) % proofMoments.length)}
-                  className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
-                >
-                  ←
-                </button>
-                <span className="border-x border-white/15 px-4 py-3">
-                  {String(activeProof + 1).padStart(2, '0')} / {String(proofMoments.length).padStart(2, '0')}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Next proof"
-                  onClick={() => setActiveProof((activeProof + 1) % proofMoments.length)}
-                  className="px-4 py-3 transition-colors hover:bg-white hover:text-black"
-                >
-                  →
-                </button>
-              </div>
             </motion.figure>
           </div>
         </section>
