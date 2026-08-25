@@ -8,7 +8,6 @@ import RequestAccess from './pages/RequestAccess'
 import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
-import Members from './pages/Members'
 import SiteLoader from './components/SiteLoader'
 
 export default function App() {
@@ -18,7 +17,6 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/members" element={<Members />} />
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestAccess />} />
 

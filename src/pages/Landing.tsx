@@ -47,7 +47,7 @@ const proofMoments = [
     image: '/anthropic-claude-code-delhi.png',
     alt: 'Astralis speaking at the Anthropic Claude Code event in Delhi',
     label: '12 July 2026 // Anthropic Claude Code Event, Delhi',
-    headline: 'Spoke on one engineer, one startup, zero bottlenecks. Live agentic build, in front of a room of senior engineers.',
+    headline: 'An Astralis member spoke on one engineer, one startup, zero bottlenecks. Live agentic build, in front of a room of senior engineers.',
   },
   {
     type: 'Room',
@@ -55,20 +55,6 @@ const proofMoments = [
     alt: 'An Astralis member hosting a founder and investor meetup at Hilton Works',
     label: 'Founder × Investor Meetup, Hilton Works',
     headline: 'An Astralis member built the room in seven days. 50+ founders and investors showed up.',
-  },
-  {
-    type: 'Win',
-    image: '/hackbmu-8-team-noir.png',
-    alt: 'Team Noir receiving third place certificates at HackBMU 8.0',
-    label: '18–19 April 2026 // HackBMU 8.0',
-    headline: 'Team Noir takes third among 100+ teams.',
-  },
-  {
-    type: 'Win',
-    image: '/orbix-team-monarch.png',
-    alt: 'Team Monarch holding the ORBIX winners trophy at IIIT Delhi',
-    label: '25–26 March 2026 // ORBIX',
-    headline: 'Team Monarch wins ORBIX at IIIT Delhi.',
   },
 ]
 
@@ -97,7 +83,6 @@ export default function Landing() {
           <AstralisLogo className="h-9 w-9" />
         </Link>
         <div className="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65 sm:gap-7 sm:text-[11px]">
-          <Link to="/members" viewTransition className="transition-colors hover:text-white">Members</Link>
           {user ? (
             <Link to="/dashboard" className="transition-colors hover:text-white">
               <span className="sm:hidden">{memberInitials}</span>

@@ -20,7 +20,7 @@ function GoogleIcon() {
 
 type Values = {
   links: string
-  proof: string
+  flex: string
   building: string
   contribution: string
 }
@@ -47,11 +47,11 @@ const steps: Step[] = [
     type: 'textarea',
   },
   {
-    field: 'proof',
-    label: 'Proof',
-    question: 'Show us your best proof. Won, raised, built, whatever it is.',
-    hint: 'Give us the strongest thing you have done and enough context to judge it.',
-    placeholder: 'The strongest proof you have.',
+    field: 'flex',
+    label: 'Flex',
+    question: "What's your biggest flex?",
+    hint: "One thing you're proud of. Product, funding, audience, collab, side project.",
+    placeholder: "The one thing you're proudest of.",
     type: 'textarea',
   },
   {
@@ -65,18 +65,23 @@ const steps: Step[] = [
   { field: 'contribution', label: 'Contribution', question: 'What can the room ask of you?', hint: 'Be specific about the judgment, skill, or perspective you bring.', placeholder: 'Come to me when you need…', type: 'textarea' },
 ]
 
+const basedStorageKey = 'astralis_application_based'
+
 export default function RequestAccess() {
   const navigate = useNavigate()
   const { user, profile, loading } = useAuth()
   const [current, setCurrent] = useState(0)
   const [values, setValues] = useState<Values>({
     links: '',
-    proof: '',
+    flex: '',
     building: '',
     contribution: '',
   })
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [based, setBased] = useState(() =>
+    typeof window === 'undefined' ? '' : window.localStorage.getItem(basedStorageKey) || '',
+  )
   const [authStage, setAuthStage] = useState<'details' | 'sent'>('details')
   const [resendIn, setResendIn] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -99,6 +104,7 @@ export default function RequestAccess() {
     if (!user) return
     setName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
     setEmail(user.email || '')
+    setBased(user.user_metadata?.based || window.localStorage.getItem(basedStorageKey) || '')
     setCurrent(0)
   }, [profile?.name, user])
 
@@ -135,8 +141,9 @@ export default function RequestAccess() {
 
   function applicationReason() {
     return [
+      `BASED IN\n${based.trim()}`,
       `LINKS\n${values.links.trim()}`,
-      `BEST PROOF\n${values.proof.trim()}`,
+      `BIGGEST FLEX\n${values.flex.trim()}`,
       `BUILDING NOW\n${values.building.trim()}`,
       `CONTRIBUTION\n${values.contribution.trim()}`,
     ].join('\n\n')
@@ -177,15 +184,17 @@ export default function RequestAccess() {
 
   async function sendOtp() {
     const normalizedEmail = email.trim().toLowerCase()
-    if (!name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || otpBusy || resendIn > 0) return
+    const normalizedBased = based.trim()
+    if (!name.trim() || !normalizedBased || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || otpBusy || resendIn > 0) return
 
     setError('')
     setOtpBusy(true)
+    window.localStorage.setItem(basedStorageKey, normalizedBased)
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: true,
-        data: { name: name.trim() },
+        data: { name: name.trim(), based: normalizedBased },
         emailRedirectTo: `${window.location.origin}/request`,
       },
     })
@@ -201,8 +210,11 @@ export default function RequestAccess() {
   }
 
   async function handleGoogleSignup() {
+    const normalizedBased = based.trim()
+    if (!normalizedBased) return
     setError('')
     setGoogleBusy(true)
+    window.localStorage.setItem(basedStorageKey, normalizedBased)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/request` },
@@ -214,7 +226,7 @@ export default function RequestAccess() {
   }
 
   async function handleSubmit() {
-    if (!user?.id || !user.email) return
+    if (!user?.id || !user.email || !based.trim()) return
     setSubmitting(true)
     const { error: reqError } = await supabase.from('access_requests').insert({
       user_id: user.id,
@@ -236,6 +248,7 @@ export default function RequestAccess() {
     }
     setDone(true)
     setSubmitting(false)
+    window.localStorage.removeItem(basedStorageKey)
   }
 
   const variants = {
@@ -336,6 +349,20 @@ export default function RequestAccess() {
                     autoComplete="email"
                     className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
                   />
+                  <input
+                    type="text"
+                    value={based}
+                    onChange={(event) => setBased(event.target.value.slice(0, 100))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void sendOtp()
+                      }
+                    }}
+                    placeholder="Where are you based?"
+                    autoComplete="address-level2"
+                    className="w-full border-b border-white/15 bg-transparent py-3 font-sans text-sm text-white outline-none transition-colors placeholder:text-white/25 focus:border-white/60"
+                  />
                 </div>
               ) : null}
 
@@ -363,6 +390,7 @@ export default function RequestAccess() {
                     otpBusy ||
                     authStage === 'sent' ||
                     !name.trim() ||
+                    !based.trim() ||
                     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
                   }
                   className="border border-white/15 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.16em] text-white/62 transition-colors hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
@@ -390,7 +418,7 @@ export default function RequestAccess() {
                   <button
                     type="button"
                     onClick={handleGoogleSignup}
-                    disabled={googleBusy || otpBusy}
+                    disabled={googleBusy || otpBusy || !based.trim()}
                     className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                   >
                     <GoogleIcon />
