@@ -8,18 +8,18 @@ import { useAuth } from '../contexts/AuthContext'
 const pillars = [
   {
     index: '01',
-    title: 'Hackathons',
-    body: 'We form teams early, prepare properly, and enter to place.',
+    title: 'The Weekends',
+    body: 'Treks, sports, house parties, jam nights. Every week, something real.',
   },
   {
     index: '02',
-    title: 'Introductions',
-    body: 'We help each other meet the right people at the right time.',
+    title: 'The Room',
+    body: 'Closed-door roundtables. Real numbers, real talk.',
   },
   {
     index: '03',
-    title: 'The Room',
-    body: 'We speak where it counts and run our own nights.',
+    title: 'The Network',
+    body: 'The right intro at the right time. We back each other.',
   },
 ]
 
