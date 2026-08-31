@@ -57,15 +57,17 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE TABLE IF NOT EXISTS access_requests (
-  id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id    UUID        DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE SET NULL,
-  name       TEXT        NOT NULL,
-  email      TEXT        NOT NULL,
-  reason     TEXT        NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     UUID        DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE SET NULL,
+  name        TEXT        NOT NULL,
+  email       TEXT        NOT NULL,
+  reason      TEXT        NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  approved_at TIMESTAMPTZ
 );
 
 ALTER TABLE access_requests ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+ALTER TABLE access_requests ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 
 DO $$
 BEGIN
@@ -132,6 +134,63 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.approve_access_request(target_request_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  request_row public.access_requests%ROWTYPE;
+  target_profile_id UUID;
+BEGIN
+  IF public.get_my_role() IS DISTINCT FROM 'admin' THEN
+    RAISE EXCEPTION 'Admin access required' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT *
+  INTO request_row
+  FROM public.access_requests
+  WHERE id = target_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Application not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF request_row.approved_at IS NOT NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  SELECT id
+  INTO target_profile_id
+  FROM public.profiles
+  WHERE id = request_row.user_id
+     OR lower(trim(email)) = lower(trim(request_row.email))
+  ORDER BY (id = request_row.user_id) DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'No member profile matches this application' USING ERRCODE = 'P0002';
+  END IF;
+
+  UPDATE public.profiles
+  SET approved = TRUE
+  WHERE id = target_profile_id;
+
+  UPDATE public.access_requests
+  SET user_id = target_profile_id,
+      approved_at = NOW()
+  WHERE id = target_request_id;
+
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.approve_access_request(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.approve_access_request(UUID) TO authenticated;
+
 -- ────────────────────────────────────────────────────────────
 -- Row Level Security
 -- ────────────────────────────────────────────────────────────
@@ -141,12 +200,16 @@ ALTER TABLE hackathons      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE access_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE UNIQUE INDEX IF NOT EXISTS access_requests_email_unique
-  ON access_requests (lower(email));
+DROP INDEX IF EXISTS access_requests_email_unique;
+DROP INDEX IF EXISTS access_requests_user_id_unique;
 
-CREATE UNIQUE INDEX IF NOT EXISTS access_requests_user_id_unique
+CREATE UNIQUE INDEX access_requests_email_unique
+  ON access_requests (lower(email))
+  WHERE approved_at IS NULL;
+
+CREATE UNIQUE INDEX access_requests_user_id_unique
   ON access_requests (user_id)
-  WHERE user_id IS NOT NULL;
+  WHERE user_id IS NOT NULL AND approved_at IS NULL;
 
 -- Drop existing policies before recreating (safe re-run)
 DROP POLICY IF EXISTS "profiles_select"               ON profiles;
@@ -194,12 +257,13 @@ CREATE POLICY "messages_insert"
 
 -- access_requests ────────────────────────────────────────────
 
--- Verified users can submit one request tied to their auth identity
+-- Verified users can submit one pending request tied to their auth identity
 CREATE POLICY "access_requests_insert"
   ON access_requests FOR INSERT
   TO authenticated
   WITH CHECK (
     user_id = auth.uid()
+    AND approved_at IS NULL
     AND is_verified_applicant()
     AND lower(trim(email)) = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
   );
@@ -215,10 +279,10 @@ CREATE POLICY "access_requests_select_own"
   TO authenticated
   USING (user_id = auth.uid());
 
--- Only admins can dismiss (delete) requests
+-- Only admins can dismiss (delete) pending requests
 CREATE POLICY "access_requests_delete_admin"
   ON access_requests FOR DELETE
-  USING (get_my_role() = 'admin');
+  USING (get_my_role() = 'admin' AND approved_at IS NULL);
 
 -- ────────────────────────────────────────────────────────────
 -- Auto-create profile row on new signup
@@ -282,7 +346,7 @@ END $$;
 --    b. The verified-user trigger creates a profile (approved=false)
 --    c. User completes /request and the request is tied to auth.uid()
 --    d. Admin goes to /admin → Requests tab → clicks Approve
---    e. User can now sign in at /login
+--    e. Approval is retained on the request and the user can sign in at /login
 --
 -- 2. To bootstrap YOUR admin account (first time only), run either:
 --      UPDATE profiles SET approved = true, role = 'admin' WHERE email = 'your@email.com';

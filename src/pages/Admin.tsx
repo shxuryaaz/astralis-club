@@ -29,13 +29,14 @@ export default function Admin() {
   const [requests, setRequests] = useState<AccessRequest[]>([])
   const [form, setForm] = useState<HackathonForm>(emptyForm)
   const [editing, setEditing] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests'>('requests')
+  const [activeTab, setActiveTab] = useState<'hackathons' | 'users' | 'requests' | 'approved'>('requests')
   const [loading, setLoading] = useState(true)
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
   const [hackathonError, setHackathonError] = useState('')
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null)
 
   const normEmail = (e: string) => e.trim().toLowerCase()
+  const hasAccess = (profile: UserProfile) => profile.approved || profile.role === 'admin'
 
   function profileForRequest(request: AccessRequest) {
     if (request.user_id) {
@@ -51,7 +52,7 @@ export default function Admin() {
   function requestLinkStatus(req: AccessRequest): RequestLinkStatus {
     const p = profileForRequest(req)
     if (!p) return 'no_profile'
-    if (p.approved) return 'approved'
+    if (hasAccess(p)) return 'approved'
     return 'pending'
   }
 
@@ -124,39 +125,17 @@ export default function Admin() {
   async function approveRequest(req: AccessRequest) {
     setRowError(null)
     setBusyRequestId(req.id)
-    const match = profileForRequest(req)
-    const q = match
-      ? supabase.from('profiles').update({ approved: true }).eq('id', match.id).select('id')
-      : supabase
-          .from('profiles')
-          .update({ approved: true })
-          .ilike('email', normEmail(req.email))
-          .select('id')
-
-    const { data, error } = await q
+    const { data, error } = await supabase.rpc('approve_access_request', {
+      target_request_id: req.id,
+    })
 
     if (error) {
       setRowError({ id: req.id, message: error.message })
       setBusyRequestId(null)
       return
     }
-    if (!data?.length) {
-      setRowError({
-        id: req.id,
-        message:
-          'No row in Members (profiles) for this email — signup may have failed or the email differs. Dismiss clears this application only; fix the account in Supabase if needed.',
-      })
-      setBusyRequestId(null)
-      return
-    }
-
-    setUsers((prev) =>
-      prev.map((u) => (u.id === match?.id ? { ...u, approved: true } : u))
-    )
-    await supabase.from('access_requests').delete().eq('id', req.id)
-    setRequests((prev) => prev.filter((r) => r.id !== req.id))
     await fetchAll()
-    void capturePostHog('access_request_approved')
+    if (data) void capturePostHog('access_request_approved')
     setBusyRequestId(null)
   }
 
@@ -173,13 +152,13 @@ export default function Admin() {
     setBusyRequestId(null)
   }
 
-  async function clearApprovedFromQueue() {
-    const ids = requests.filter((r) => requestLinkStatus(r) === 'approved').map((r) => r.id)
+  async function archiveApprovedFromQueue() {
+    const ids = pendingRequests.filter((r) => requestLinkStatus(r) === 'approved').map((r) => r.id)
     if (ids.length === 0) return
     setRowError(null)
     setBusyRequestId('__bulk__')
     for (const id of ids) {
-      const { error } = await supabase.from('access_requests').delete().eq('id', id)
+      const { error } = await supabase.rpc('approve_access_request', { target_request_id: id })
       if (error) {
         setRowError({ id, message: error.message })
         setBusyRequestId(null)
@@ -187,7 +166,6 @@ export default function Admin() {
         return
       }
     }
-    setRequests((prev) => prev.filter((r) => !ids.includes(r.id)))
     await fetchAll()
     setBusyRequestId(null)
   }
@@ -199,7 +177,21 @@ export default function Admin() {
     setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...updated } : x)))
   }
 
-  const approvedInQueueCount = requests.filter((r) => requestLinkStatus(r) === 'approved').length
+  const pendingRequests = requests.filter((request) => !request.approved_at)
+  const approvedRequests = requests
+    .filter((request): request is AccessRequest & { approved_at: string } => Boolean(request.approved_at))
+    .sort((a, b) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
+  const legacyApprovedUsers = users
+    .filter(
+      (user) =>
+        user.approved &&
+        !approvedRequests.some(
+          (request) => request.user_id === user.id || normEmail(request.email) === normEmail(user.email),
+        ),
+    )
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const approvedInQueueCount = pendingRequests.filter((r) => requestLinkStatus(r) === 'approved').length
+  const approvedCount = approvedRequests.length + legacyApprovedUsers.length
   const bulkBusy = busyRequestId === '__bulk__'
 
   return (
@@ -211,7 +203,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <div className="mb-10 flex gap-5 overflow-x-auto border-b border-white/[0.07] pb-4 sm:mb-12 sm:gap-8">
-          {(['requests', 'users', 'hackathons'] as const).map((tab) => (
+          {(['requests', 'approved', 'users', 'hackathons'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -220,8 +212,11 @@ export default function Admin() {
               }`}
             >
               {tab}
-              {tab === 'requests' && requests.length > 0 && (
-                <span className="ml-2 text-white/55">({requests.length})</span>
+              {tab === 'requests' && pendingRequests.length > 0 && (
+                <span className="ml-2 text-white/55">({pendingRequests.length})</span>
+              )}
+              {tab === 'approved' && approvedCount > 0 && (
+                <span className="ml-2 text-white/55">({approvedCount})</span>
               )}
             </button>
           ))}
@@ -347,25 +342,25 @@ export default function Admin() {
             <p className={labelClass}>Request queue</p>
             <p className="font-sans text-xs text-white/62 max-w-2xl mt-3 leading-relaxed">
               Submitted applications and pending accounts created directly through sign-in appear here. Approving
-              grants access and removes the item from the queue. Direct sign-ins cannot be approved until they apply.
+              grants access and moves the item to Approved. Direct sign-ins cannot be approved until they apply.
             </p>
-            {requests.length > 0 && approvedInQueueCount > 0 && (
+            {pendingRequests.length > 0 && approvedInQueueCount > 0 && (
               <div className="mt-6">
                 <button
                   type="button"
                   disabled={bulkBusy}
-                  onClick={() => clearApprovedFromQueue()}
+                  onClick={() => archiveApprovedFromQueue()}
                   className="font-mono text-[10px] tracking-widest uppercase text-white/68 border border-white/15 px-4 py-2 hover:border-white/35 hover:text-white/70 transition-all duration-500 disabled:opacity-25"
                 >
-                  {bulkBusy ? 'Clearing…' : `Clear ${approvedInQueueCount} already-approved from queue`}
+                  {bulkBusy ? 'Archiving…' : `Archive ${approvedInQueueCount} already-approved`}
                 </button>
               </div>
             )}
-            {requests.length === 0 ? (
+            {pendingRequests.length === 0 ? (
               <p className="font-mono text-[10px] tracking-widest uppercase text-white/42 mt-6">Queue is empty</p>
             ) : (
               <div className="mt-8 divide-y divide-white/[0.07]">
-                {requests.map((req) => {
+                {pendingRequests.map((req) => {
                   const link = requestLinkStatus(req)
                   const busy = busyRequestId === req.id || bulkBusy
                   return (
@@ -379,7 +374,7 @@ export default function Admin() {
                               ? 'Legacy request · no verified member profile'
                               : link === 'pending'
                                 ? 'Verified · access not approved yet'
-                                : 'Already approved in Members — dismiss to remove from queue'}
+                                : 'Already has access · archive to approved history'}
                           </p>
                           <p className="max-w-md whitespace-pre-wrap font-sans text-xs leading-relaxed text-white/68">
                             {req.reason}
@@ -417,6 +412,68 @@ export default function Admin() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'approved' ? (
+          <div>
+            <p className={labelClass}>Approved applications</p>
+            <p className="mt-3 max-w-2xl font-sans text-xs leading-relaxed text-white/62">
+              Retained applications appear with their original answers and approval date. Older or direct approvals
+              are listed from Members when application data is unavailable.
+            </p>
+            {approvedCount === 0 ? (
+              <p className="mt-6 font-mono text-[10px] uppercase tracking-widest text-white/42">
+                No approved applications
+              </p>
+            ) : (
+              <div className="mt-8 divide-y divide-white/[0.07]">
+                {approvedRequests.map((req) => {
+                  const profile = profileForRequest(req)
+                  const accessStatus = !profile
+                    ? 'Profile unavailable'
+                    : hasAccess(profile)
+                      ? profile.role === 'admin'
+                        ? 'Access active · admin'
+                        : 'Access active'
+                      : 'Access revoked'
+
+                  return (
+                    <div key={req.id} className="py-6">
+                      <div className="min-w-0">
+                        <p className="mb-1 font-sans text-sm text-white/75">{req.name}</p>
+                        <p className="mb-2 font-mono text-[10px] tracking-wider text-white/48">{req.email}</p>
+                        <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-white/48">
+                          {accessStatus}
+                        </p>
+                        <p className="max-w-2xl whitespace-pre-wrap font-sans text-xs leading-relaxed text-white/68">
+                          {req.reason}
+                        </p>
+                        <div className="mt-4 flex flex-col gap-1 font-mono text-[10px] tracking-wider text-white/35 sm:flex-row sm:gap-5">
+                          <span>Submitted {formatTimestamp(req.created_at)}</span>
+                          <span>Approved {formatTimestamp(req.approved_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {legacyApprovedUsers.map((user) => (
+                  <div key={`legacy-${user.id}`} className="py-6">
+                    <div className="min-w-0">
+                      <p className="mb-1 font-sans text-sm text-white/75">{user.name}</p>
+                      <p className="mb-2 font-mono text-[10px] tracking-wider text-white/48">{user.email}</p>
+                      <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-white/48">
+                        Access active · application unavailable
+                      </p>
+                      <p className="max-w-2xl font-sans text-xs leading-relaxed text-white/55">
+                        Approved before history tracking or directly from Members.
+                      </p>
+                      <p className="mt-3 font-mono text-[10px] tracking-wider text-white/35">
+                        Member since {formatTimestamp(user.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

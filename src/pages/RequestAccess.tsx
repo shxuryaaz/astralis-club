@@ -125,6 +125,7 @@ export default function RequestAccess() {
       .from('access_requests')
       .select('id')
       .eq('user_id', user.id)
+      .is('approved_at', null)
       .limit(1)
       .maybeSingle()
       .then(({ data, error: requestError }) => {

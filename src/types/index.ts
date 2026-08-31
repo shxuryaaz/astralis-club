@@ -31,4 +31,5 @@ export interface AccessRequest {
   email: string
   reason: string
   created_at: string
+  approved_at: string | null
 }
